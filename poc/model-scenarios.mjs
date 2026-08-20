@@ -502,6 +502,28 @@ function capture(scenario, step, graph, paths) {
   }
 }
 
+// 22. A fully answered emergency-work determination remains complete when an entrance is also selected.
+{
+  const name = '22 · Emergency utility and entrance determination';
+  const { graph } = makeGraph();
+  apply(graph, {
+    '/includesUtilityActivity': true,
+    '/includesGeneralUtilityWork': true,
+    '/includesEntranceWork': true,
+    '/utilityIsEmergency': true,
+    '/utilityJurisdiction': 'row',
+    '/utilityGroundDisturbanceSqFt': 0,
+    '/utilityTrafficImpact': 'lane',
+    '/utilityDuration': 'longer'
+  });
+  expect(name, 'all determining answers supplied', graph, '/permitPackageDetermined', 'complete', true);
+  expect(name, 'emergency permit identity', graph, '/utilityPermitIdentity', 'complete', 'emergency');
+  expect(name, 'emergency permit required', graph, '/emergencyUtilityPermitNeeded', 'complete', true);
+  expect(name, 'entrance permit required', graph, '/entrancePermitNeeded', 'complete', true);
+  expect(name, 'two permits required', graph, '/requiredPermitCount', 'complete', 2);
+  expect(name, 'utility application questions enabled', graph, '/askGeneralUtilityQuestions', 'complete', true);
+}
+
 const failures = checks.filter(check => !check.pass);
 const report = { scenarios, checks: { total: checks.length, passed: checks.length - failures.length, failed: failures.length, failures } };
 console.log(JSON.stringify(process.argv.includes('--summary') ? report.checks : report, null, 2));

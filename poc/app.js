@@ -598,10 +598,21 @@ function renderVisualizer(){
 }
 function escapeHtml(value){ return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 function escapeAttribute(value){ return escapeHtml(value).replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+function showValidationFailures(failures){
+  const notice=$('#notice');
+  if(!failures.length){ notice.innerHTML=''; notice.className='notice hidden'; return; }
+  notice.innerHTML=`<strong>More information is needed</strong><ul>${failures.slice(0,8).map(requirement=>`<li>${escapeHtml(requirement.label)}</li>`).join('')}</ul>`;
+  notice.className='notice error';
+}
+function refreshValidationNotice(){
+  const notice=$('#notice');
+  if(notice.classList.contains('hidden')) return;
+  showValidationFailures(validationFacts().currentRequirements.filter(requirement=>!requirement.satisfied));
+}
 function setVisualizer(open){ $('#fact-visualizer').classList.toggle('open',open); $('#fact-visualizer').setAttribute('aria-hidden',String(!open)); $('#open-visualizer').setAttribute('aria-expanded',String(open)); $('#visualizer-scrim').classList.toggle('hidden',!open); if(open) renderVisualizer(); }
 
-$('#application-form').addEventListener('input',()=>{ bindValues($('#application-form')); rebuildGraph(); renderSummary(); renderVisualizer(); });
-$('#application-form').addEventListener('change',(event)=>{ bindValues($('#application-form')); rebuildGraph(); const conditionalQuestionChanged=(event.target.name==='underground'&&(currentRoute()==='utility'||currentRoute()==='wirelessConstruction'))||(event.target.name==='locationRelationship'&&currentRoute()==='wirelessOverview'); if((currentRoute()==='review'&&event.target.name==='attest')||conditionalQuestionChanged||currentRoute()==='entrance') render(); else { renderSummary(); renderGisSettings(); } renderVisualizer(); });
+$('#application-form').addEventListener('input',()=>{ bindValues($('#application-form')); rebuildGraph(); refreshValidationNotice(); renderSummary(); renderVisualizer(); });
+$('#application-form').addEventListener('change',(event)=>{ bindValues($('#application-form')); rebuildGraph(); refreshValidationNotice(); const conditionalQuestionChanged=(event.target.name==='underground'&&(currentRoute()==='utility'||currentRoute()==='wirelessConstruction'))||(event.target.name==='locationRelationship'&&currentRoute()==='wirelessOverview'); if((currentRoute()==='review'&&event.target.name==='attest')||conditionalQuestionChanged||currentRoute()==='entrance') render(); else { renderSummary(); renderGisSettings(); } renderVisualizer(); });
 $('#application-form').addEventListener('submit',(e)=>{
   e.preventDefault();
   bindValues(e.currentTarget);
@@ -610,8 +621,7 @@ $('#application-form').addEventListener('submit',(e)=>{
   let failures=validity.currentRequirements.filter(r=>!r.satisfied);
   if(step===reviewStep()&&!validity.readyToSubmit&&failures.length===0) failures=validity.requirements.filter(r=>!r.satisfied);
   if(failures.length){
-    $('#notice').innerHTML=`<strong>More information is needed</strong><ul>${failures.slice(0,8).map(r=>`<li>${r.label}</li>`).join('')}</ul>`;
-    $('#notice').className='notice error';
+    showValidationFailures(failures);
     renderVisualizer();
     return;
   }
