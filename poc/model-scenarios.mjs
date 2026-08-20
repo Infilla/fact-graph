@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import * as FactGraph from '../demo/fg.js';
 import { explanationGroups, formatGraphExplanation } from './explanation.js';
+import { decimalValue } from './presentation.js';
 
 const xml = fs.readFileSync(new URL('./fact-dictionary.xml', import.meta.url), 'utf8');
 const dictionary = FactGraph.FactDictionaryFactory.importFromXml(xml);
@@ -252,7 +253,9 @@ function capture(scenario, step, graph, paths) {
   apply(graph, { ...shared, '/includesUtilityActivity': true, '/includesSmallWirelessFacilities': true, '/requestedWirelessNodeCount': 1,
     ...eligibleWirelessSite(id), [sitePath(id, 'facilityHeight')]: 51 });
   capture(name, 'height facts', graph, [sitePath(id, 'poleHeight'), sitePath(id, 'facilityHeight'), sitePath(id, 'heightLimit'), sitePath(id, 'heightEligible'), sitePath(id, 'permitEligible')]);
-  expect(name, 'height facts', graph, sitePath(id, 'heightLimit'), 'complete', '50/1');
+  const displayedHeightLimit=decimalValue(read(graph,sitePath(id,'heightLimit')).value);
+  const displayPass=displayedHeightLimit===50;
+  checks.push({scenario:name,step:'height limit presentation',path:sitePath(id,'heightLimit'),expectedStatus:'decimal display',expectedValue:50,actual:{status:displayPass?'decimal display':'raw engine value',value:displayedHeightLimit},pass:displayPass});
   expect(name, 'height facts', graph, sitePath(id, 'heightEligible'), 'complete', false);
 }
 
@@ -390,6 +393,9 @@ function capture(scenario, step, graph, paths) {
   expect(name, 'decimal values supplied', graph, sitePath(id, 'sizeEligible'), 'complete', true);
   apply(graph, { [sitePath(id, 'poleHeight')]: 40.5, [sitePath(id, 'facilityHeight')]: 49.75 });
   expect(name, 'decimal heights supplied', graph, sitePath(id, 'heightEligible'), 'complete', true);
+  const decimalLimit=decimalValue(read(graph,sitePath(id,'heightLimit')).value);
+  const decimalDisplayPass=decimalLimit===50.5;
+  checks.push({scenario:name,step:'decimal height-limit presentation',path:sitePath(id,'heightLimit'),expectedStatus:'decimal display',expectedValue:50.5,actual:{status:decimalDisplayPass?'decimal display':'raw engine value',value:decimalLimit},pass:decimalDisplayPass});
   apply(graph, { [sitePath(id, 'largestAntennaVolume')]: 6.5 });
   expect(name, 'statutory threshold exceeded', graph, sitePath(id, 'sizeEligible'), 'complete', false);
 }

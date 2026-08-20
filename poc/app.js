@@ -1,5 +1,6 @@
 import * as FactGraph from '../demo/fg.js';
 import { formatGraphExplanation } from './explanation.js';
+import { decimalValue } from './presentation.js';
 
 const $ = (selector) => document.querySelector(selector);
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -131,17 +132,12 @@ function rebuildGraph(){
   graph.save();
 }
 const facts = () => {
-  const u = state.utility;
   const node = state.nodes[state.currentNode];
   const wireless = hasWireless();
-  const inJurisdiction = ['row','easement','aerial'].includes(u.jurisdiction);
-  const prefix=node?`/sites/#${node.id}`:'';
-  const qualifies=prefix?graphResult(`${prefix}/sizeEligible`):null;
-  const heightLimit=prefix?graphResult(`${prefix}/heightEligible`):null;
   const docs = graphDocumentRecords().filter(record=>wireless?record.scope==='node'&&record.node===node:record.requiredBy.includes('utility')).map(record=>record.label);
   const derivedUtilityPermit=graphResult('/utilityPermitType');
   const wirelessPermit = graphResult('/wirelessPermitType')||'Not determined';
-  return { wireless, utility:hasGeneralUtility(), entrance:hasEntrance(), combined:activityCount()>1, inJurisdiction, permitType:hasGeneralUtility()?(derivedUtilityPermit||'Not determined'):(wireless?wirelessPermit:'Not requested'), wirelessPermitType:wirelessPermit, entrancePermitType:graphResult('/entrancePermitType')||'Not determined', qualifies, heightLimit, canProceed: hasGeneralUtility()?graphBoolean('/utilityPermitEligible'):wireless?graphBoolean('/allWirelessNodesEligible'):true, nodeCount:graphResult('/wirelessNodeCount')??state.nodes.length, fee:wireless ? Number(graphResult('/wirelessTotalFee')??0) : 0, documents:docs };
+  return { wireless, utility:hasGeneralUtility(), entrance:hasEntrance(), combined:activityCount()>1, permitType:hasGeneralUtility()?(derivedUtilityPermit||'Not determined'):(wireless?wirelessPermit:'Not requested'), wirelessPermitType:wirelessPermit, entrancePermitType:graphResult('/entrancePermitType')||'Not determined', nodeCount:graphResult('/wirelessNodeCount')??state.nodes.length, fee:wireless ? Number(graphResult('/wirelessTotalFee')??0) : 0, documents:docs };
 };
 
 const documentCatalog = [
@@ -405,11 +401,6 @@ function renderGisSettings(){
 }
 
 const displayValue=(value,labels={}) => !hasValue(value)?'Unanswered':labels[value]??value;
-const decimalValue=value=>{
-  if(typeof value!=='string'||!value.includes('/')) return value;
-  const [numerator,denominator]=value.split('/').map(Number);
-  return denominator?numerator/denominator:value;
-};
 function graphExplanation(path){
   try{
     const friendlyFactPath=factPath=>{
@@ -506,11 +497,10 @@ function visualizerGraph(){
       const result=graphResult(`${prefix}/permitEligible`);
       const determined=result!==null;
       const eligible=result===true;
-      const maximumHeight=graphResult(`${prefix}/heightLimit`);
-      const gisEligible=graphResult(`${prefix}/gisJurisdictionEligible`);
-      const specialReview=graphBoolean(`${prefix}/gisSpecialReviewRequired`);
-      const reason=!determined?'Waiting for equipment, height, and GIS jurisdiction facts.':`Equipment size = ${graphBoolean(`${prefix}/sizeEligible`)?'eligible':'not eligible'}; facility height ${node.facilityHeight} ft. against ${maximumHeight} ft. limit; GIS jurisdiction = ${gisEligible?'eligible':'not eligible'}${specialReview?'; limited-access review required':''}.`;
-      return {path:`${prefix}/permitEligible`,label:`Node ${index+1}${node.siteId?` (${node.siteId})`:''} eligibility`,value:determined?(eligible?'Eligible':'Does not qualify'):'Not determined',reason:graphExplanation(`${prefix}/permitEligible`),blocking:determined&&!eligible,determined,eligible};
+      const facilityHeight=decimalValue(graphResult(`${prefix}/facilityHeight`));
+      const heightLimit=decimalValue(graphResult(`${prefix}/heightLimit`));
+      const measurement=hasValue(facilityHeight)&&hasValue(heightLimit)?` Current facility height: ${facilityHeight} ft.; applicable limit: ${heightLimit} ft.`:'';
+      return {path:`${prefix}/permitEligible`,label:`Node ${index+1}${node.siteId?` (${node.siteId})`:''} eligibility`,value:determined?(eligible?'Eligible':'Does not qualify'):'Not determined',reason:`${graphExplanation(`${prefix}/permitEligible`)}${measurement}`,blocking:determined&&!eligible,determined,eligible};
     });
     const allEligible=nodeEligibility.every(result=>result.determined&&result.eligible);
     consequences.push(...nodeEligibility);
