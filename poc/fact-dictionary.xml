@@ -2,6 +2,19 @@
 <FactDictionaryModule>
   <!-- Project and contact facts are shared by every application in the package. -->
   <Facts>
+    <!-- Controlled vocabularies are part of the model. The UI reads these lists
+         instead of maintaining a second set of allowed values. -->
+    <Fact path="/contactFilerTypeOptions"><Derived><EnumOptions><String>owner</String><String>agent</String></EnumOptions></Derived></Fact>
+    <Fact path="/utilityTypeOptions"><Derived><EnumOptions><String>water</String><String>sewer</String><String>gas</String><String>power</String><String>telephone</String><String>fiber</String></EnumOptions></Derived></Fact>
+    <Fact path="/utilityWorkTypeOptions"><Derived><EnumOptions><String>simple</String><String>pole</String><String>underground</String></EnumOptions></Derived></Fact>
+    <Fact path="/utilityJurisdictionOptions"><Derived><EnumOptions><String>row</String><String>easement</String><String>aerial</String><String>none</String></EnumOptions></Derived></Fact>
+    <Fact path="/utilityTrafficImpactOptions"><Derived><EnumOptions><String>none</String><String>lane</String><String>major</String></EnumOptions></Derived></Fact>
+    <Fact path="/utilityDurationOptions"><Derived><EnumOptions><String>day</String><String>longer</String></EnumOptions></Derived></Fact>
+    <Fact path="/entranceTypeOptions"><Derived><EnumOptions><String>commercial</String><String>subdivision</String><String>industrial</String><String>solar</String></EnumOptions></Derived></Fact>
+    <Fact path="/entranceWorkTypeOptions"><Derived><EnumOptions><String>new</String><String>modify</String><String>relocate</String></EnumOptions></Derived></Fact>
+    <Fact path="/siteScopeOptions"><Derived><EnumOptions><String>new</String><String>modify</String></EnumOptions></Derived></Fact>
+    <Fact path="/siteStructureWorkOptions"><Derived><EnumOptions><String>attach</String><String>replace</String><String>new</String></EnumOptions></Derived></Fact>
+    <Fact path="/sitePoleOwnerOptions"><Derived><EnumOptions><String>utility</String><String>wip</String><String>deldot</String><String>other</String></EnumOptions></Derived></Fact>
     <Fact path="/includesUtilityActivity"><Writable><Boolean/></Writable></Fact>
     <Fact path="/includesGeneralUtilityWork"><Writable><Boolean/></Writable></Fact>
     <Fact path="/includesSmallWirelessFacilities"><Writable><Boolean/></Writable></Fact>
@@ -22,7 +35,7 @@
     <Fact path="/contactLastName"><Writable><String/></Writable></Fact>
     <Fact path="/contactEmail"><Writable><String><Limit type="Match"><String>^[^\s@]+@[^\s@]+\.[^\s@]+$</String></Limit></String></Writable></Fact>
     <Fact path="/contactPhone"><Writable><String/></Writable></Fact>
-    <Fact path="/contactFilerType"><Writable><String/></Writable></Fact>
+    <Fact path="/contactFilerType"><Writable><Enum optionsPath="/contactFilerTypeOptions"/></Writable></Fact>
     <Fact path="/isAuthorizedAgent"><Writable><Boolean/></Writable></Fact>
     <Fact path="/mlUoaAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/authorizedAgentFormAttached"><Writable><Boolean/></Writable></Fact>
@@ -64,18 +77,18 @@
 
     <!-- A utility project normally produces one permit application. -->
     <Fact path="/utilityIsPublic"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityType"><Writable><String/></Writable></Fact>
-    <Fact path="/utilityWorkType"><Writable><String/></Writable></Fact>
+    <Fact path="/utilityType"><Writable><Enum optionsPath="/utilityTypeOptions"/></Writable></Fact>
+    <Fact path="/utilityWorkType"><Writable><Enum optionsPath="/utilityWorkTypeOptions"/></Writable></Fact>
     <Fact path="/utilityWorkDescription"><Writable><String/></Writable></Fact>
     <Fact path="/utilityIsEmergency"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityJurisdiction"><Writable><String/></Writable></Fact>
-    <Fact path="/utilityIsInDelDOTJurisdiction"><Derived><Not><Equal><Left><Dependency path="/utilityJurisdiction"/></Left><Right><String>none</String></Right></Equal></Not></Derived></Fact>
+    <Fact path="/utilityJurisdiction"><Writable><Enum optionsPath="/utilityJurisdictionOptions"/></Writable></Fact>
+    <Fact path="/utilityIsInDelDOTJurisdiction"><Derived><Not><Equal><Left><Dependency path="/utilityJurisdiction"/></Left><Right><Enum optionsPath="/utilityJurisdictionOptions">none</Enum></Right></Equal></Not></Derived></Fact>
     <Fact path="/utilityGroundDisturbanceSqFt"><Writable><Int><Limit type="Min"><Int>0</Int></Limit></Int></Writable></Fact>
-    <Fact path="/utilityTrafficImpact"><Writable><String/></Writable></Fact>
-    <Fact path="/utilityHasMajorTrafficImpact"><Derived><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><String>major</String></Right></Equal></Derived></Fact>
-    <Fact path="/utilityHasTrafficImpact"><Derived><Not><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><String>none</String></Right></Equal></Not></Derived></Fact>
-    <Fact path="/utilityDuration"><Writable><String/></Writable></Fact>
-    <Fact path="/utilityLongerThanOneDay"><Derived><Equal><Left><Dependency path="/utilityDuration"/></Left><Right><String>longer</String></Right></Equal></Derived></Fact>
+    <Fact path="/utilityTrafficImpact"><Writable><Enum optionsPath="/utilityTrafficImpactOptions"/></Writable></Fact>
+    <Fact path="/utilityHasMajorTrafficImpact"><Derived><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><Enum optionsPath="/utilityTrafficImpactOptions">major</Enum></Right></Equal></Derived></Fact>
+    <Fact path="/utilityHasTrafficImpact"><Derived><Not><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><Enum optionsPath="/utilityTrafficImpactOptions">none</Enum></Right></Equal></Not></Derived></Fact>
+    <Fact path="/utilityDuration"><Writable><Enum optionsPath="/utilityDurationOptions"/></Writable></Fact>
+    <Fact path="/utilityLongerThanOneDay"><Derived><Equal><Left><Dependency path="/utilityDuration"/></Left><Right><Enum optionsPath="/utilityDurationOptions">longer</Enum></Right></Equal></Derived></Fact>
     <Fact path="/utilityRequiresTrafficControlPlan">
       <Derived><Dependency path="/anySiteRequiresTrafficControlPlan"/></Derived>
     </Fact>
@@ -165,8 +178,8 @@
     </All></Derived></Fact>
 
     <!-- Entrance-permit facts consume the same project and site facts as utility rules. -->
-    <Fact path="/entranceType"><Writable><String/></Writable></Fact>
-    <Fact path="/entranceWorkType"><Writable><String/></Writable></Fact>
+    <Fact path="/entranceType"><Writable><Enum optionsPath="/entranceTypeOptions"/></Writable></Fact>
+    <Fact path="/entranceWorkType"><Writable><Enum optionsPath="/entranceWorkTypeOptions"/></Writable></Fact>
     <Fact path="/entrancePlanningApprovalReceived"><Writable><Boolean/></Writable></Fact>
     <Fact path="/entranceExistingAdtEntering"><Writable><Int/></Writable></Fact>
     <Fact path="/entranceExistingAdtExiting"><Writable><Int/></Writable></Fact>
@@ -224,9 +237,9 @@
     <Fact path="/entranceOwnershipReason"><Derived><String>An Entrance Permit requires evidence that the applicant may perform work on this property.</String></Derived></Fact>
     <Fact path="/entranceRecordedPlanReason"><Derived><String>An Entrance Permit requires the recorded plan or applicable subdivision plan.</String></Derived></Fact>
     <Fact path="/entranceConstructionPlanReason"><Derived><Switch>
-      <Case><When><Equal><Left><Dependency path="/entranceWorkType"/></Left><Right><String>new</String></Right></Equal></When><Then><String>You are constructing a new entrance.</String></Then></Case>
-      <Case><When><Equal><Left><Dependency path="/entranceWorkType"/></Left><Right><String>modify</String></Right></Equal></When><Then><String>You are modifying an existing entrance.</String></Then></Case>
-      <Case><When><Equal><Left><Dependency path="/entranceWorkType"/></Left><Right><String>relocate</String></Right></Equal></When><Then><String>You are relocating an existing entrance.</String></Then></Case>
+      <Case><When><Equal><Left><Dependency path="/entranceWorkType"/></Left><Right><Enum optionsPath="/entranceWorkTypeOptions">new</Enum></Right></Equal></When><Then><String>You are constructing a new entrance.</String></Then></Case>
+      <Case><When><Equal><Left><Dependency path="/entranceWorkType"/></Left><Right><Enum optionsPath="/entranceWorkTypeOptions">modify</Enum></Right></Equal></When><Then><String>You are modifying an existing entrance.</String></Then></Case>
+      <Case><When><Equal><Left><Dependency path="/entranceWorkType"/></Left><Right><Enum optionsPath="/entranceWorkTypeOptions">relocate</Enum></Right></Equal></When><Then><String>You are relocating an existing entrance.</String></Then></Case>
     </Switch></Derived></Fact>
     <Fact path="/entranceCostEstimateReason"><Derived><String>An Entrance Permit requires an estimate of the proposed construction cost.</String></Derived></Fact>
     <Fact path="/entranceScheduleReason"><Derived><String>An Entrance Permit requires the planned construction schedule.</String></Derived></Fact>
@@ -259,9 +272,9 @@
     <Fact path="/sites/*/latitude"><Writable><String/></Writable></Fact>
     <Fact path="/sites/*/longitude"><Writable><String/></Writable></Fact>
     <Fact path="/sites/*/county"><Writable><String/></Writable></Fact>
-    <Fact path="/sites/*/scope"><Writable><String/></Writable></Fact>
-    <Fact path="/sites/*/structureWork"><Writable><String/></Writable></Fact>
-    <Fact path="/sites/*/poleOwner"><Writable><String/></Writable></Fact>
+    <Fact path="/sites/*/scope"><Writable><Enum optionsPath="/siteScopeOptions"/></Writable></Fact>
+    <Fact path="/sites/*/structureWork"><Writable><Enum optionsPath="/siteStructureWorkOptions"/></Writable></Fact>
+    <Fact path="/sites/*/poleOwner"><Writable><Enum optionsPath="/sitePoleOwnerOptions"/></Writable></Fact>
     <Fact path="/sites/*/largestAntennaVolume"><Writable><Rational/></Writable></Fact>
     <Fact path="/sites/*/otherEquipmentVolume"><Writable><Rational/></Writable></Fact>
     <Fact path="/sites/*/poleHeight"><Writable><Rational/></Writable></Fact>
@@ -342,10 +355,10 @@
     </Fact>
     <Fact path="/sites/*/permitEligible"><Derived><All><Dependency path="../statutoryQualificationSatisfied"/><Dependency path="../gisJurisdictionEligible"/></All></Derived></Fact>
     <Fact path="/sites/*/constructionPlanRequired"><Derived><True/></Derived></Fact>
-    <Fact path="/sites/*/isAttachment"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><String>attach</String></Right></Equal></Derived></Fact>
-    <Fact path="/sites/*/isDelDotOwned"><Derived><Equal><Left><Dependency path="../poleOwner"/></Left><Right><String>deldot</String></Right></Equal></Derived></Fact>
-    <Fact path="/sites/*/isReplacement"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><String>replace</String></Right></Equal></Derived></Fact>
-    <Fact path="/sites/*/isNewStructure"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><String>new</String></Right></Equal></Derived></Fact>
+    <Fact path="/sites/*/isAttachment"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><Enum optionsPath="/siteStructureWorkOptions">attach</Enum></Right></Equal></Derived></Fact>
+    <Fact path="/sites/*/isDelDotOwned"><Derived><Equal><Left><Dependency path="../poleOwner"/></Left><Right><Enum optionsPath="/sitePoleOwnerOptions">deldot</Enum></Right></Equal></Derived></Fact>
+    <Fact path="/sites/*/isReplacement"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><Enum optionsPath="/siteStructureWorkOptions">replace</Enum></Right></Equal></Derived></Fact>
+    <Fact path="/sites/*/isNewStructure"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><Enum optionsPath="/siteStructureWorkOptions">new</Enum></Right></Equal></Derived></Fact>
     <Fact path="/sites/*/supportOwnerConsentRequired"><Derived><All><Dependency path="../isAttachment"/><Not><Dependency path="../isDelDotOwned"/></Not></All></Derived></Fact>
     <Fact path="/sites/*/delDotAttachmentAgreementRequired"><Derived><All><Dependency path="../isAttachment"/><Dependency path="../isDelDotOwned"/></All></Derived></Fact>
     <Fact path="/sites/*/structuralCalculationsRequired"><Derived><Any><Dependency path="../isNewStructure"/><Dependency path="../isReplacement"/><Dependency path="../delDotAttachmentAgreementRequired"/></Any></Derived></Fact>

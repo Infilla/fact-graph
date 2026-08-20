@@ -7,6 +7,11 @@ import { decimalValue } from './presentation.js';
 const xml = fs.readFileSync(new URL('./fact-dictionary.xml', import.meta.url), 'utf8');
 const dictionary = FactGraph.FactDictionaryFactory.importFromXml(xml);
 const appSource = fs.readFileSync(new URL('./app.js', import.meta.url), 'utf8');
+const enumPaths = {
+  '/contactFilerType':'/contactFilerTypeOptions','/utilityType':'/utilityTypeOptions','/utilityWorkType':'/utilityWorkTypeOptions',
+  '/utilityJurisdiction':'/utilityJurisdictionOptions','/utilityTrafficImpact':'/utilityTrafficImpactOptions','/utilityDuration':'/utilityDurationOptions',
+  '/entranceType':'/entranceTypeOptions','/entranceWorkType':'/entranceWorkTypeOptions',scope:'/siteScopeOptions',structureWork:'/siteStructureWorkOptions',poleOwner:'/sitePoleOwnerOptions'
+};
 
 const normalize = value => value && typeof value === 'object' && value.toString__T
   ? value.toString__T()
@@ -42,6 +47,8 @@ function set(graph, path, value) {
     const denominator=10**decimals;
     value=FactGraph.RationalFactory(Math.round(value*denominator),denominator);
   }
+  const enumOptionsPath=enumPaths[path]||enumPaths[path.split('/').pop()];
+  if(enumOptionsPath) value=FactGraph.EnumFactory(String(value),enumOptionsPath).right;
   graph.set__T__O__V(path, value);
 }
 
@@ -430,6 +437,21 @@ function capture(scenario, step, graph, paths) {
   const text=formatGraphExplanation(graph,'/utilityPermitType');
   const preservesGroups=text.includes('determining groups')&&groups.length===3;
   checks.push({scenario:name,step:'group formatting',path:'/utilityPermitType',expectedStatus:'grouped',expectedValue:true,actual:{status:preservesGroups?'grouped':'flattened',value:text},pass:preservesGroups});
+}
+
+// 19. Controlled answers and their option lists come from the dictionary.
+{
+  const name = '19 · Dictionary-backed controlled answers';
+  const { graph } = makeGraph();
+  for(const [path,optionsPath] of Object.entries(enumPaths).filter(([path])=>path.startsWith('/'))){
+    const options=read(graph,optionsPath);
+    const declared=options.status==='complete'&&options.value.startsWith('List(');
+    checks.push({scenario:name,step:'enum option source',path:optionsPath,expectedStatus:'dictionary options',expectedValue:true,actual:{status:declared?'dictionary options':options.status,value:declared},pass:declared});
+    const configured=dictionary.getOptionsPathForEnum(path);
+    const configuredPath=configured?.s_Some__f_value;
+    const pass=configuredPath===optionsPath;
+    checks.push({scenario:name,step:'enum writable',path,expectedStatus:'enum',expectedValue:optionsPath,actual:{status:pass?'enum':'wrong type',value:configuredPath||null},pass});
+  }
 }
 
 const failures = checks.filter(check => !check.pass);
