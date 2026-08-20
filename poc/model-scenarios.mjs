@@ -3,10 +3,12 @@ import crypto from 'node:crypto';
 import * as FactGraph from '../demo/fg.js';
 import { explanationGroups, formatGraphExplanation } from './explanation.js';
 import { decimalValue } from './presentation.js';
+import { populateGisFromCoordinates } from './gis.js';
 
 const xml = fs.readFileSync(new URL('./fact-dictionary.xml', import.meta.url), 'utf8');
 const dictionary = FactGraph.FactDictionaryFactory.importFromXml(xml);
 const appSource = fs.readFileSync(new URL('./app.js', import.meta.url), 'utf8');
+const diagramSource = fs.readFileSync(new URL('./fact-model.mmd', import.meta.url), 'utf8');
 const enumPaths = {
   '/contactFilerType':'/contactFilerTypeOptions','/utilityType':'/utilityTypeOptions','/utilityWorkType':'/utilityWorkTypeOptions',
   '/utilityJurisdiction':'/utilityJurisdictionOptions','/utilityTrafficImpact':'/utilityTrafficImpactOptions','/utilityDuration':'/utilityDurationOptions',
@@ -529,6 +531,34 @@ function capture(scenario, step, graph, paths) {
   const name = '23 · Browser graph rebuild ordering';
   const pass = /graphSet\('\/includesEntranceWork'[\s\S]*?graph\.save\(\);[\s\S]*?graphSet\('\/projectName'/.test(appSource);
   checks.push({scenario:name,step:'activity layer transaction',path:'rebuildGraph()',expectedStatus:'saved before derived reads',expectedValue:true,actual:{status:pass?'saved before derived reads':'ordering regression',value:pass},pass});
+}
+
+// 24. Coordinates simulate an external GIS response once without replacing returned values.
+{
+  const name = '24 · Coordinate-triggered GIS enrichment';
+  const site = { latitude:'39.1', longitude:'-75.5', gis:{ stateMaintained:'', limitedAccess:'', airportAirspace:'', nearRailroad:'' } };
+  const draws = [0.19, 0.2, 0.05];
+  const changed = populateGisFromCoordinates(site, () => draws.shift());
+  const expected = { stateMaintained:'true', limitedAccess:'true', airportAirspace:'false', nearRailroad:'true' };
+  const pass = changed && JSON.stringify(site.gis) === JSON.stringify(expected);
+  checks.push({scenario:name,step:'initial GIS response',path:'/sites/*/gis*',expectedStatus:'derived externally',expectedValue:expected,actual:{status:pass?'derived externally':'incorrect',value:site.gis},pass});
+  const preserved = populateGisFromCoordinates(site, () => 0) === false && JSON.stringify(site.gis) === JSON.stringify(expected);
+  checks.push({scenario:name,step:'preserve existing GIS response',path:'/sites/*/gis*',expectedStatus:'unchanged',expectedValue:expected,actual:{status:preserved?'unchanged':'overwritten',value:site.gis},pass:preserved});
+  const incomplete = { latitude:'39.1', longitude:'', gis:{} };
+  const waits = populateGisFromCoordinates(incomplete, () => 0) === false && Object.keys(incomplete.gis).length === 0;
+  checks.push({scenario:name,step:'wait for both coordinates',path:'/sites/*/gis*',expectedStatus:'not returned',expectedValue:true,actual:{status:waits?'not returned':'premature',value:waits},pass:waits});
+}
+
+// 25. Every fact displayed in the relationship diagram is declared by the dictionary.
+{
+  const name = '25 · Diagram fact-path integrity';
+  const { graph } = makeGraph();
+  const dictionaryPaths = new Set(Array.from(graph.paths()));
+  const diagramPaths = [...diagramSource.matchAll(/\["(\/[A-Za-z][A-Za-z0-9/*-]*)"\]/g)].map(match => match[1]);
+  for (const path of new Set(diagramPaths)) {
+    const pass = dictionaryPaths.has(path);
+    checks.push({scenario:name,step:'diagram source scan',path,expectedStatus:'declared',expectedValue:true,actual:{status:pass?'declared':'missing',value:pass},pass});
+  }
 }
 
 const failures = checks.filter(check => !check.pass);

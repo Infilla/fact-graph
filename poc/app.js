@@ -1,6 +1,7 @@
 import * as FactGraph from '../demo/fg.js';
 import { formatGraphExplanation } from './explanation.js';
 import { decimalValue } from './presentation.js';
+import { populateGisFromCoordinates } from './gis.js';
 
 const $ = (selector) => document.querySelector(selector);
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -417,8 +418,8 @@ function bindValues(form){ const data=new FormData(form); const route=currentRou
   }
   if(route==='contact') Object.assign(state.contact,Object.fromEntries(data));
   if(route==='project') state.projectName=data.get('projectName')||state.projectName;
-  if(route==='site'||route==='utility'){ const target=state.utility; for(const [k,v] of data) target[k]=v; if(route==='utility'){ const checkboxFacts=['foundations','underground','pavement','electrical','casing','railroad','detour','complexConditions','pedestrianImpact','travelLaneOccupation']; checkboxFacts.forEach(k=>target[k]=data.has(k)); } }
-  if(route==='wirelessOverview'||route==='wirelessConstruction'){ const target=state.nodes[state.currentNode]; for(const [k,v] of data) target[k]=v; if(route==='wirelessConstruction'){ const checkboxFacts=['foundations','underground','pavement','electrical','casing','railroad','detour','complexConditions','pedestrianImpact','travelLaneOccupation']; checkboxFacts.forEach(k=>target[k]=data.has(k)); } }
+  if(route==='site'||route==='utility'){ const target=state.utility; for(const [k,v] of data) target[k]=v; populateGisFromCoordinates(target); if(route==='utility'){ const checkboxFacts=['foundations','underground','pavement','electrical','casing','railroad','detour','complexConditions','pedestrianImpact','travelLaneOccupation']; checkboxFacts.forEach(k=>target[k]=data.has(k)); } }
+  if(route==='wirelessOverview'||route==='wirelessConstruction'){ const target=state.nodes[state.currentNode]; for(const [k,v] of data) target[k]=v; populateGisFromCoordinates(target); if(route==='wirelessConstruction'){ const checkboxFacts=['foundations','underground','pavement','electrical','casing','railroad','detour','complexConditions','pedestrianImpact','travelLaneOccupation']; checkboxFacts.forEach(k=>target[k]=data.has(k)); } }
   if(route==='entrance'){ const values=Object.fromEntries(data); state.entrance.type=values.type||state.entrance.type; state.entrance.workType=values.entranceWorkType||state.entrance.workType; ['planningApproval','adtEntering','adtExiting','peakHourTrips','priorUse','proposedUse','stakesDate','taxParcelId'].forEach(k=>{ if(values[k]!==undefined) state.entrance[k]=values[k]; }); }
   if(route==='documents') form.querySelectorAll('input[type=file][data-document-key]').forEach(input=>{ if(input.files?.length) state.documentComplete[input.dataset.documentKey]=true; });
   if(route==='review') state.attestationAccepted=data.has('attest'); save(); }

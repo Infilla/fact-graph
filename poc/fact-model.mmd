@@ -1,99 +1,190 @@
 flowchart LR
-  classDef source fill:#eaf5fb,stroke:#1769aa,color:#12385b,stroke-width:1.5px
-  classDef external fill:#eef3ff,stroke:#536fc4,color:#26366f,stroke-width:1.5px,stroke-dasharray:5 3
-  classDef derived fill:#eef9f3,stroke:#19734a,color:#104b32,stroke-width:1.5px
-  classDef complete fill:#fff8df,stroke:#c58a00,color:#4a3600,stroke-width:1.5px
-  classDef output fill:#f1effa,stroke:#6852a3,color:#30225c,stroke-width:1.5px
+  classDef supplied fill:#eaf5fb,stroke:#1769aa,color:#12385b
+  classDef gis fill:#eef3ff,stroke:#536fc4,color:#26366f,stroke-dasharray:5 3
+  classDef derived fill:#eef9f3,stroke:#19734a,color:#104b32
+  classDef completion fill:#fff8df,stroke:#c58a00,color:#4a3600
+  classDef output fill:#f1effa,stroke:#6852a3,color:#30225c
 
-  subgraph PROJECT["Shared project"]
-    ACTIVITIES["Activity facts"]:::source
-    DET_MANIFEST["Determination manifest<br/>/askUtilityDeterminationQuestions<br/>/askWirelessDeterminationQuestions"]:::derived
-    DETERMINANTS["Permit-determining answers<br/>emergency · jurisdiction · disturbance<br/>traffic · duration · wireless count"]:::source
-    PACKAGE_DONE["/permitPackageDetermined"]:::complete
-    NEEDED["Five explicit outcomes<br/>/utilityConstructionPermitNeeded<br/>/utilitySafetyPermitNeeded<br/>/emergencyUtilityPermitNeeded<br/>/smallWirelessPermitsNeeded<br/>/entrancePermitNeeded"]:::derived
-    PERMIT_COUNT["/requiredPermitCount<br/>includes /wirelessPermitCount"]:::derived
-    QUESTION_MANIFEST["Graph form manifest<br/>/askSharedApplicationQuestions<br/>/askProjectSiteQuestions<br/>/askGeneralUtilityQuestions<br/>/askWirelessNodeQuestions<br/>/askEntranceQuestions<br/>/askDocumentQuestions"]:::derived
-    CONTACT["/projectName + /contact*"]:::source
-    SHARED["/sharedApplicationFactsComplete"]:::complete
-    ACTIVITIES --> SHARED
-    ACTIVITIES --> DET_MANIFEST --> DETERMINANTS --> PACKAGE_DONE --> NEEDED --> PERMIT_COUNT --> QUESTION_MANIFEST
-    CONTACT --> SHARED
-  end
+  GU["/includesGeneralUtilityWork"]:::supplied
+  SW["/includesSmallWirelessFacilities"]:::supplied
+  EN["/includesEntranceWork"]:::supplied
+  EM["/utilityIsEmergency"]:::supplied
+  JUR["/utilityJurisdiction"]:::supplied
+  DIST["/utilityGroundDisturbanceSqFt"]:::supplied
+  IMPACT["/utilityTrafficImpact"]:::supplied
+  DUR["/utilityDuration"]:::supplied
+  NODE_REQUEST["/requestedWirelessNodeCount"]:::supplied
+  U_REQUEST["/utilityPermitRequested"]:::derived
+  SW_APP["/isSmallWirelessApplication"]:::derived
+  EN_REQUEST["/entrancePermitRequested"]:::derived
+  JUR_BOOL["/utilityIsInDelDOTJurisdiction"]:::derived
+  TRAFFIC_BOOL["/utilityHasTrafficImpact"]:::derived
+  LONG_BOOL["/utilityLongerThanOneDay"]:::derived
+  U_DET["/utilityPermitDeterminationComplete"]:::completion
+  SW_DET["/wirelessPermitDeterminationComplete"]:::completion
+  PACKAGE_DET["/permitPackageDetermined"]:::completion
+  U_ID["/utilityPermitIdentity"]:::derived
 
-  subgraph SITES["/sites collection"]
-    SITE_SOURCE["Applicant site facts<br/>location · construction · traffic"]:::source
-    GIS_SOURCE["External GIS facts<br/>state road · limited access<br/>airport · railroad"]:::external
-    GIS_JUR["*/gisJurisdictionEligible"]:::derived
-    GIS_REVIEWS["*/gisSpecialReviewRequired<br/>*/airportReviewRequired<br/>*/railroadReviewRequired"]:::derived
-    TCP["*/requiresTrafficControlPlan"]:::derived
-    ANY_TCP["/anySiteRequiresTrafficControlPlan"]:::derived
-    GIS_SOURCE --> GIS_JUR
-    GIS_SOURCE --> GIS_REVIEWS
-    SITE_SOURCE --> TCP --> ANY_TCP
-  end
+  GU --> U_REQUEST
+  SW --> SW_APP
+  EN --> EN_REQUEST
+  JUR --> JUR_BOOL
+  IMPACT --> TRAFFIC_BOOL
+  DUR --> LONG_BOOL
+  U_REQUEST --> U_DET
+  EM --> U_DET
+  JUR --> U_DET
+  DIST --> U_DET
+  IMPACT --> U_DET
+  DUR --> U_DET
+  SW_APP --> SW_DET
+  NODE_REQUEST --> SW_DET
+  U_DET --> PACKAGE_DET
+  SW_DET --> PACKAGE_DET
+  EM --> U_ID
+  JUR_BOOL --> U_ID
+  DIST --> U_ID
+  TRAFFIC_BOOL --> U_ID
+  LONG_BOOL --> U_ID
 
-  subgraph GENERAL["Other listed utility work"]
-    U_RAW["Raw answers<br/>/utilityJurisdiction<br/>/utilityTrafficImpact<br/>/utilityDuration"]:::source
-    U_DERIVED["Derived jurisdiction, traffic<br/>and duration booleans"]:::derived
-    U_ID["/utilityPermitIdentity enum<br/>emergency · construction · safety · none"]:::derived
-    U_PERMIT["/utilityPermitType<br/>applicant-facing label"]:::derived
-    U_ANSWERS["/utilityRequiredAnswersComplete"]:::complete
-    U_DOCS["/utilityDocumentsComplete"]:::complete
-    U_DONE["/generalUtilityRequirementsSatisfied"]:::complete
-    U_RAW --> U_DERIVED --> U_ID --> U_PERMIT
-    U_RAW --> U_ANSWERS
-    ANY_TCP --> U_DOCS
-    GIS_REVIEWS --> U_DOCS
-    U_ANSWERS --> U_DONE
-    U_PERMIT --> U_DONE
-    U_DOCS --> U_DONE
-  end
+  U_CON["/utilityConstructionPermitNeeded"]:::derived
+  U_SAFE["/utilitySafetyPermitNeeded"]:::derived
+  U_EM["/emergencyUtilityPermitNeeded"]:::derived
+  SW_NEEDED["/smallWirelessPermitsNeeded"]:::derived
+  EN_NEEDED["/entrancePermitNeeded"]:::derived
+  GU_REQUIRED["/generalUtilityApplicationRequired"]:::derived
+  GU_COUNT["/generalUtilityPermitCount"]:::derived
+  SW_COUNT["/wirelessPermitCount"]:::derived
+  EN_COUNT["/entrancePermitCount"]:::derived
+  PERMIT_COUNT["/requiredPermitCount"]:::derived
 
-  subgraph WIRELESS["Small wireless · per node"]
-    NODE["Wireless sites/*<br/>equipment · height · impacts"]:::source
-    SIZE["*/sizeEligible"]:::derived
-    HEIGHT["*/heightEligible"]:::derived
-    QUAL["*/statutoryQualificationSatisfied"]:::derived
-    NODE_ELIG["*/permitEligible"]:::derived
-    NODE_DOCS["*/documentsComplete"]:::complete
-    NODE_READY["*/readyToSubmit"]:::complete
-    ALL_NODES["/allWirelessNodesComplete"]:::complete
-    W_DONE["/smallWirelessRequirementsSatisfied"]:::complete
-    FEE["/wirelessTotalFee<br/>collection size × $100"]:::derived
-    NODE --> SIZE --> QUAL
-    NODE --> HEIGHT --> QUAL
-    QUAL --> NODE_ELIG
-    GIS_JUR --> NODE_ELIG
-    GIS_REVIEWS --> NODE_DOCS
-    TCP --> NODE_DOCS
-    NODE_ELIG --> NODE_READY
-    NODE_DOCS --> NODE_READY --> ALL_NODES --> W_DONE
-    NODE --> FEE
-  end
+  U_REQUEST --> U_CON
+  U_ID --> U_CON
+  U_REQUEST --> U_SAFE
+  U_ID --> U_SAFE
+  U_REQUEST --> U_EM
+  U_ID --> U_EM
+  SW_APP --> SW_NEEDED
+  EN_REQUEST --> EN_NEEDED
+  U_CON --> GU_REQUIRED
+  U_SAFE --> GU_REQUIRED
+  U_EM --> GU_REQUIRED
+  GU_REQUIRED --> GU_COUNT
+  SW_NEEDED --> SW_COUNT
+  NODE_REQUEST --> SW_COUNT
+  EN_NEEDED --> EN_COUNT
+  GU_COUNT --> PERMIT_COUNT
+  SW_COUNT --> PERMIT_COUNT
+  EN_COUNT --> PERMIT_COUNT
 
-  subgraph ENTRANCE["Entrance"]
-    E_SOURCE["Entrance type · work<br/>traffic · parcel · property use"]:::source
-    E_TRAFFIC["/entranceTotalAdt<br/>conditional review facts"]:::derived
-    E_PERMIT["/entrancePermitType"]:::derived
-    E_DOCS["/entranceDocumentsComplete"]:::complete
-    E_DONE["/entranceRequirementsSatisfied"]:::complete
-    E_SOURCE --> E_TRAFFIC --> E_DOCS
-    E_SOURCE --> E_PERMIT
-    GIS_JUR --> E_DONE
-    E_DOCS --> E_DONE
-  end
+  LAT["/sites/*/latitude"]:::supplied
+  LON["/sites/*/longitude"]:::supplied
+  GIS_ROAD["/sites/*/gisIsStateMaintainedRoad"]:::gis
+  GIS_LIMITED["/sites/*/gisIsLimitedAccessRoad"]:::gis
+  GIS_AIR["/sites/*/gisIsInAirportAirspace"]:::gis
+  GIS_RAIL["/sites/*/gisIsNearRailroad"]:::gis
+  GIS_JUR["/sites/*/gisJurisdictionEligible"]:::derived
+  GIS_SPECIAL["/sites/*/gisSpecialReviewRequired"]:::derived
+  AIR_REVIEW["/sites/*/airportReviewRequired"]:::derived
+  RAIL_CROSS["/sites/*/crossesRailroad"]:::supplied
+  RAIL_REVIEW["/sites/*/railroadReviewRequired"]:::derived
 
-  DETERMINANTS --> U_RAW
-  QUESTION_MANIFEST --> CONTACT
-  QUESTION_MANIFEST --> SITE_SOURCE
-  QUESTION_MANIFEST --> NODE
-  QUESTION_MANIFEST --> E_SOURCE
-  SHARED --> COMPLETE["/applicationComplete"]:::complete
-  PROJECT_DOCS["/projectDocumentsComplete"]:::complete --> COMPLETE
-  U_DONE --> COMPLETE
-  W_DONE --> COMPLETE
-  E_DONE --> COMPLETE
-  COMPLETE --> READY["/readyToSubmit"]:::derived
-  ATTEST["/attestationsAccepted"]:::source --> READY
-  READY --> PACKAGE["One submission package<br/>all derived permits"]:::output
-  FEE --> PACKAGE
+  LAT -. triggers GIS lookup .-> GIS_ROAD
+  LON -. triggers GIS lookup .-> GIS_ROAD
+  LAT -. triggers GIS lookup .-> GIS_LIMITED
+  LON -. triggers GIS lookup .-> GIS_AIR
+  LON -. triggers GIS lookup .-> GIS_RAIL
+  GIS_ROAD --> GIS_JUR
+  GIS_LIMITED --> GIS_SPECIAL
+  GIS_AIR --> AIR_REVIEW
+  GIS_RAIL --> RAIL_REVIEW
+  RAIL_CROSS --> RAIL_REVIEW
+
+  ANT["/sites/*/largestAntennaVolume"]:::supplied
+  EQUIP["/sites/*/otherEquipmentVolume"]:::supplied
+  POLE_H["/sites/*/poleHeight"]:::supplied
+  FAC_H["/sites/*/facilityHeight"]:::supplied
+  SIZE_OK["/sites/*/sizeEligible"]:::derived
+  HEIGHT_LIMIT["/sites/*/heightLimit"]:::derived
+  HEIGHT_OK["/sites/*/heightEligible"]:::derived
+  STAT_OK["/sites/*/statutoryQualificationSatisfied"]:::derived
+  NODE_OK["/sites/*/permitEligible"]:::derived
+
+  ANT --> SIZE_OK
+  EQUIP --> SIZE_OK
+  POLE_H --> HEIGHT_LIMIT
+  HEIGHT_LIMIT --> HEIGHT_OK
+  FAC_H --> HEIGHT_OK
+  SIZE_OK --> STAT_OK
+  HEIGHT_OK --> STAT_OK
+  STAT_OK --> NODE_OK
+  GIS_JUR --> NODE_OK
+
+  STRUCTURE["/sites/*/structureWork"]:::supplied
+  OWNER["/sites/*/poleOwner"]:::supplied
+  FOUNDATION["/sites/*/hasFoundation"]:::supplied
+  CASING["/sites/*/hasCasing"]:::supplied
+  ELECTRIC["/sites/*/hasElectricalComponents"]:::supplied
+  TA["/sites/*/typicalApplicationCount"]:::supplied
+  MAJOR["/sites/*/hasMajorTrafficImpact"]:::supplied
+  DETOUR["/sites/*/requiresDetour"]:::supplied
+  COMPLEX["/sites/*/hasComplexFieldConditions"]:::supplied
+  PED["/sites/*/impactsPedestrianAccess"]:::supplied
+  LANE["/sites/*/occupiesTravelLane"]:::supplied
+  IS_ATTACH["/sites/*/isAttachment"]:::derived
+  DELDOT_OWNER["/sites/*/isDelDotOwned"]:::derived
+  OWNER_DOC["/sites/*/supportOwnerConsentRequired"]:::derived
+  DELDOT_DOC["/sites/*/delDotAttachmentAgreementRequired"]:::derived
+  FOUNDATION_DOC["/sites/*/foundationDesignRequired"]:::derived
+  CASING_DOC["/sites/*/casingSpecificationsRequired"]:::derived
+  ARC_DOC["/sites/*/arcFlashAnalysisRequired"]:::derived
+  AIR_DOC["/sites/*/airportFormRequired"]:::derived
+  RAIL_DOC["/sites/*/railroadApprovalRequired"]:::derived
+  TCP["/sites/*/requiresTrafficControlPlan"]:::derived
+
+  STRUCTURE --> IS_ATTACH
+  OWNER --> DELDOT_OWNER
+  IS_ATTACH --> OWNER_DOC
+  DELDOT_OWNER --> OWNER_DOC
+  IS_ATTACH --> DELDOT_DOC
+  DELDOT_OWNER --> DELDOT_DOC
+  FOUNDATION --> FOUNDATION_DOC
+  CASING --> CASING_DOC
+  ELECTRIC --> ARC_DOC
+  DELDOT_OWNER --> ARC_DOC
+  AIR_REVIEW --> AIR_DOC
+  RAIL_CROSS --> RAIL_DOC
+  TA --> TCP
+  MAJOR --> TCP
+  DETOUR --> TCP
+  COMPLEX --> TCP
+  PED --> TCP
+  LANE --> TCP
+
+  NODE_ANS["/sites/*/requiredAnswersComplete"]:::completion
+  NODE_DOCS["/sites/*/documentsComplete"]:::completion
+  NODE_READY["/sites/*/readyToSubmit"]:::completion
+  ALL_NODES["/allWirelessNodesComplete"]:::completion
+  SW_DONE["/smallWirelessRequirementsSatisfied"]:::completion
+  GU_DONE["/generalUtilityRequirementsSatisfied"]:::completion
+  EN_DONE["/entranceRequirementsSatisfied"]:::completion
+  SHARED_DONE["/sharedApplicationFactsComplete"]:::completion
+  PROJECT_DOCS["/projectDocumentsComplete"]:::completion
+  APP_COMPLETE["/applicationComplete"]:::completion
+  ATTEST["/attestationsAccepted"]:::supplied
+  READY["/readyToSubmit"]:::output
+
+  NODE_OK --> NODE_READY
+  NODE_ANS --> NODE_READY
+  NODE_DOCS --> NODE_READY
+  NODE_READY --> ALL_NODES
+  ALL_NODES --> SW_DONE
+  GU_REQUIRED --> GU_DONE
+  EN_NEEDED --> EN_DONE
+  SHARED_DONE --> APP_COMPLETE
+  PROJECT_DOCS --> APP_COMPLETE
+  GU_DONE --> APP_COMPLETE
+  SW_DONE --> APP_COMPLETE
+  EN_DONE --> APP_COMPLETE
+  APP_COMPLETE --> READY
+  ATTEST --> READY
