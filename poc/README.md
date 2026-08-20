@@ -24,6 +24,6 @@ Open **Fact Graph** and use **Simulated GIS source** to change external facts fo
 - A utility project normally has one set of application facts and no fee.
 - A small wireless project declares its node count up front and owns a collection of **nodes**. Each node is an independently evaluated permit application and adds `$100` to the package total.
 - Eligibility, document requirements, attestations, and fees are derived facts rather than duplicated page logic.
-- `fact-dictionary.xml` expresses the core model using Fact Graph 3.1 primitives. `app.js` is a browser-friendly POC evaluator that makes the proposed behavior easy to test without a Scala build.
+- `fact-dictionary.xml` expresses the executable model using Fact Graph 3.1 primitives. `app.js` loads the real compiled engine, writes source facts, and projects graph results into applicant-facing screens.
 
 The flow uses the supplied specifications as requirements without binding the model to the original sequential diagram: shared contact + declared node collection → complete nodes in any navigational order → entire-application review → one checkout → transmit all applications.

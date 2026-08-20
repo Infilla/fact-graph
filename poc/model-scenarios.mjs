@@ -4,6 +4,7 @@ import * as FactGraph from '../demo/fg.js';
 
 const xml = fs.readFileSync(new URL('./fact-dictionary.xml', import.meta.url), 'utf8');
 const dictionary = FactGraph.FactDictionaryFactory.importFromXml(xml);
+const appSource = fs.readFileSync(new URL('./app.js', import.meta.url), 'utf8');
 
 const normalize = value => value && typeof value === 'object' && value.toString__T
   ? value.toString__T()
@@ -34,6 +35,11 @@ function makeGraph(siteCount = 0) {
 }
 
 function set(graph, path, value) {
+  if (/\/(largestAntennaVolume|otherEquipmentVolume)$/.test(path) && typeof value === 'number') {
+    const decimals=(String(value).split('.')[1]||'').length;
+    const denominator=10**decimals;
+    value=FactGraph.RationalFactory(Math.round(value*denominator),denominator);
+  }
   graph.set__T__O__V(path, value);
 }
 
@@ -73,7 +79,6 @@ const eligibleWirelessSite = id => ({
   [sitePath(id, 'hasPavementDisturbance')]: false,
   [sitePath(id, 'hasElectricalComponents')]: false,
   [sitePath(id, 'hasCasing')]: false,
-  [sitePath(id, 'inAirportAirspace')]: false,
   [sitePath(id, 'crossesRailroad')]: false,
   [sitePath(id, 'hasMajorTrafficImpact')]: false,
   [sitePath(id, 'requiresDetour')]: false,
@@ -96,12 +101,10 @@ const utilityAnswers = {
   '/utilityWorkType': 'underground',
   '/utilityWorkDescription': 'Install conduit in the shoulder.',
   '/utilityIsEmergency': false,
-  '/utilityIsInDelDOTJurisdiction': true,
+  '/utilityJurisdiction': 'row',
   '/utilityGroundDisturbanceSqFt': 100,
-  '/utilityHasMajorTrafficImpact': false,
-  '/utilityHasTrafficImpact': false,
-  '/utilityLongerThanOneDay': false,
-  '/utilityTypicalApplicationCount': 2,
+  '/utilityTrafficImpact': 'none',
+  '/utilityDuration': 'day',
   '/utilityDrawingAttached': true,
 };
 const utilitySiteFacts = id => ({
@@ -113,7 +116,6 @@ const utilitySiteFacts = id => ({
   [sitePath(id, 'hasMajorTrafficImpact')]: false,
   [sitePath(id, 'hasFoundation')]: false,
   [sitePath(id, 'hasCasing')]: false,
-  [sitePath(id, 'inAirportAirspace')]: false,
   [sitePath(id, 'crossesRailroad')]: false,
   [sitePath(id, 'requiresDetour')]: false,
   [sitePath(id, 'hasComplexFieldConditions')]: false,
@@ -178,7 +180,7 @@ function capture(scenario, step, graph, paths) {
   const name = '3 · Utility safety permit';
   const { graph, ids: [id] } = makeGraph(1);
   apply(graph, { ...shared, '/includesUtilityActivity': true, '/includesGeneralUtilityWork': true, ...utilityAnswers, ...utilitySiteFacts(id),
-    '/utilityGroundDisturbanceSqFt': 0, '/utilityHasTrafficImpact': true,
+    '/utilityGroundDisturbanceSqFt': 0, '/utilityTrafficImpact': 'lane',
     [sitePath(id, 'gisIsStateMaintainedRoad')]: true, [sitePath(id, 'gisIsLimitedAccessRoad')]: false });
   capture(name, 'work and GIS facts', graph, ['/utilityPermitType', '/utilityPermitEligible', '/utilityRequiresTrafficControlPlan']);
   expect(name, 'work and GIS facts', graph, '/utilityPermitType', 'complete', 'Utility Safety Permit');
@@ -194,7 +196,7 @@ function capture(scenario, step, graph, paths) {
   const name = '4 · Utility outside applicant-declared jurisdiction';
   const { graph, ids: [id] } = makeGraph(1);
   apply(graph, { ...shared, '/includesUtilityActivity': true, '/includesGeneralUtilityWork': true, ...utilityAnswers, ...utilitySiteFacts(id),
-    '/utilityIsInDelDOTJurisdiction': false,
+    '/utilityJurisdiction': 'none',
     [sitePath(id, 'gisIsStateMaintainedRoad')]: false, [sitePath(id, 'gisIsLimitedAccessRoad')]: false });
   capture(name, 'applicant and GIS agree', graph, ['/utilityPermitType', '/allSitesGisJurisdictionEligible', '/utilityPermitEligible']);
   expect(name, 'applicant and GIS agree', graph, '/utilityPermitType', 'complete', 'No DelDOT permit needed');
@@ -281,7 +283,7 @@ function capture(scenario, step, graph, paths) {
     [sitePath(id, 'gisIsNearRailroad')]: true,
     [sitePath(id, 'airportFormAttached')]: false,
     [sitePath(id, 'railroadProximityReviewAttached')]: false });
-  capture(name, 'GIS sensitive-area response', graph, [sitePath(id, 'inAirportAirspace'), sitePath(id, 'gisIsInAirportAirspace'), sitePath(id, 'airportReviewRequired'), sitePath(id, 'airportFormRequired'), sitePath(id, 'crossesRailroad'), sitePath(id, 'gisIsNearRailroad'), sitePath(id, 'railroadReviewRequired'), sitePath(id, 'railroadApprovalRequired'), sitePath(id, 'railroadProximityReviewRequired')]);
+  capture(name, 'GIS sensitive-area response', graph, [sitePath(id, 'gisIsInAirportAirspace'), sitePath(id, 'airportReviewRequired'), sitePath(id, 'airportFormRequired'), sitePath(id, 'crossesRailroad'), sitePath(id, 'gisIsNearRailroad'), sitePath(id, 'railroadReviewRequired'), sitePath(id, 'railroadApprovalRequired'), sitePath(id, 'railroadProximityReviewRequired')]);
   expect(name, 'GIS sensitive-area response', graph, sitePath(id, 'airportFormRequired'), 'complete', true);
   expect(name, 'GIS sensitive-area response', graph, sitePath(id, 'railroadApprovalRequired'), 'complete', false);
   expect(name, 'GIS sensitive-area response', graph, sitePath(id, 'railroadProximityReviewRequired'), 'complete', true);
@@ -380,6 +382,29 @@ function capture(scenario, step, graph, paths) {
   expect(name, 'all activity sets selected', graph, '/isSmallWirelessApplication', 'complete', true);
   expect(name, 'all activity sets selected', graph, '/entrancePermitRequested', 'complete', true);
   expect(name, 'all activity sets selected', graph, '/isMultiPermitProject', 'complete', true);
+}
+
+// 16. Decimal equipment volumes remain valid graph values and retain qualification semantics.
+{
+  const name = '16 · Decimal wireless equipment volumes';
+  const { graph, ids: [id] } = makeGraph(1);
+  apply(graph, { ...eligibleWirelessSite(id), [sitePath(id, 'largestAntennaVolume')]: 5.5, [sitePath(id, 'otherEquipmentVolume')]: 27.25 });
+  expect(name, 'decimal values supplied', graph, sitePath(id, 'sizeEligible'), 'complete', true);
+  apply(graph, { [sitePath(id, 'largestAntennaVolume')]: 6.5 });
+  expect(name, 'statutory threshold exceeded', graph, sitePath(id, 'sizeEligible'), 'complete', false);
+}
+
+// 17. Static fact paths shown by the browser must exist in the loaded dictionary.
+{
+  const name = '17 · UI fact-path integrity';
+  const { graph } = makeGraph();
+  const dictionaryPaths = new Set(Array.from(graph.paths()));
+  const staticPaths = [...appSource.matchAll(/['"](\/[A-Za-z][A-Za-z0-9/*-]*)['"]/g)].map(match => match[1]);
+  for (const path of new Set(staticPaths)) {
+    if (path.includes('*') || path.endsWith('/') || path === '/utility') continue;
+    const pass = dictionaryPaths.has(path);
+    checks.push({ scenario:name, step:'static source scan', path, expectedStatus:'declared', expectedValue:true, actual:{status:pass?'declared':'missing',value:pass}, pass });
+  }
 }
 
 const failures = checks.filter(check => !check.pass);

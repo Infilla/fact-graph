@@ -26,7 +26,7 @@
     <Fact path="/contactCompany"><Writable><String/></Writable></Fact>
     <Fact path="/contactFirstName"><Writable><String/></Writable></Fact>
     <Fact path="/contactLastName"><Writable><String/></Writable></Fact>
-    <Fact path="/contactEmail"><Writable><String/></Writable></Fact>
+    <Fact path="/contactEmail"><Writable><String><Limit type="Match"><String>^[^\s@]+@[^\s@]+\.[^\s@]+$</String></Limit></String></Writable></Fact>
     <Fact path="/contactPhone"><Writable><String/></Writable></Fact>
     <Fact path="/contactFilerType"><Writable><String/></Writable></Fact>
     <Fact path="/isAuthorizedAgent"><Writable><Boolean/></Writable></Fact>
@@ -53,7 +53,7 @@
         <Any><Not><Dependency path="/isSmallWirelessApplication"/></Not><Dependency path="/mlUoaAttached"/></Any>
       </All></Derived>
     </Fact>
-    <Fact path="/requestedWirelessNodeCount"><Writable><Int/></Writable></Fact>
+    <Fact path="/requestedWirelessNodeCount"><Writable><Int><Limit type="Min"><Int>1</Int></Limit><Limit type="Max"><Int>50</Int></Limit></Int></Writable></Fact>
     <Fact path="/sharedApplicationFactsComplete">
       <Derived><All>
         <Dependency path="/atLeastOneActivitySelected"/>
@@ -74,18 +74,16 @@
     <Fact path="/utilityWorkType"><Writable><String/></Writable></Fact>
     <Fact path="/utilityWorkDescription"><Writable><String/></Writable></Fact>
     <Fact path="/utilityIsEmergency"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityIsInDelDOTJurisdiction"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityGroundDisturbanceSqFt"><Writable><Int/></Writable></Fact>
-    <Fact path="/utilityHasMajorTrafficImpact"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityTypicalApplicationCount"><Writable><Int/></Writable></Fact>
-    <Fact path="/utilityHasTrafficImpact"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityLongerThanOneDay"><Writable><Boolean/></Writable></Fact>
+    <Fact path="/utilityJurisdiction"><Writable><String/></Writable></Fact>
+    <Fact path="/utilityIsInDelDOTJurisdiction"><Derived><Not><Equal><Left><Dependency path="/utilityJurisdiction"/></Left><Right><String>none</String></Right></Equal></Not></Derived></Fact>
+    <Fact path="/utilityGroundDisturbanceSqFt"><Writable><Int><Limit type="Min"><Int>0</Int></Limit></Int></Writable></Fact>
+    <Fact path="/utilityTrafficImpact"><Writable><String/></Writable></Fact>
+    <Fact path="/utilityHasMajorTrafficImpact"><Derived><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><String>major</String></Right></Equal></Derived></Fact>
+    <Fact path="/utilityHasTrafficImpact"><Derived><Not><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><String>none</String></Right></Equal></Not></Derived></Fact>
+    <Fact path="/utilityDuration"><Writable><String/></Writable></Fact>
+    <Fact path="/utilityLongerThanOneDay"><Derived><Equal><Left><Dependency path="/utilityDuration"/></Left><Right><String>longer</String></Right></Equal></Derived></Fact>
     <Fact path="/utilityRequiresTrafficControlPlan">
-      <Derived><Any>
-        <GreaterThanOrEqual><Left><Dependency path="/utilityTypicalApplicationCount"/></Left><Right><Int>5</Int></Right></GreaterThanOrEqual>
-        <Dependency path="/utilityHasMajorTrafficImpact"/>
-        <Dependency path="/anySiteRequiresTrafficControlPlan"/>
-      </Any></Derived>
+      <Derived><Dependency path="/anySiteRequiresTrafficControlPlan"/></Derived>
     </Fact>
     <Fact path="/utilityRequiredAnswersComplete">
       <Derived><All>
@@ -94,11 +92,10 @@
         <IsComplete><Dependency path="/utilityWorkType"/></IsComplete>
         <IsComplete><Dependency path="/utilityWorkDescription"/></IsComplete>
         <IsComplete><Dependency path="/utilityIsEmergency"/></IsComplete>
-        <IsComplete><Dependency path="/utilityIsInDelDOTJurisdiction"/></IsComplete>
+        <IsComplete><Dependency path="/utilityJurisdiction"/></IsComplete>
         <IsComplete><Dependency path="/utilityGroundDisturbanceSqFt"/></IsComplete>
-        <IsComplete><Dependency path="/utilityHasMajorTrafficImpact"/></IsComplete>
-        <IsComplete><Dependency path="/utilityLongerThanOneDay"/></IsComplete>
-        <IsComplete><Dependency path="/utilityTypicalApplicationCount"/></IsComplete>
+        <IsComplete><Dependency path="/utilityTrafficImpact"/></IsComplete>
+        <IsComplete><Dependency path="/utilityDuration"/></IsComplete>
         <Dependency path="/allSiteCommonAnswersComplete"/>
       </All></Derived>
     </Fact>
@@ -274,8 +271,8 @@
     <Fact path="/sites/*/scope"><Writable><String/></Writable></Fact>
     <Fact path="/sites/*/structureWork"><Writable><String/></Writable></Fact>
     <Fact path="/sites/*/poleOwner"><Writable><String/></Writable></Fact>
-    <Fact path="/sites/*/largestAntennaVolume"><Writable><Int/></Writable></Fact>
-    <Fact path="/sites/*/otherEquipmentVolume"><Writable><Int/></Writable></Fact>
+    <Fact path="/sites/*/largestAntennaVolume"><Writable><Rational/></Writable></Fact>
+    <Fact path="/sites/*/otherEquipmentVolume"><Writable><Rational/></Writable></Fact>
     <Fact path="/sites/*/poleHeight"><Writable><Int/></Writable></Fact>
     <Fact path="/sites/*/facilityHeight"><Writable><Int/></Writable></Fact>
     <Fact path="/sites/*/hasFoundation"><Writable><Boolean/></Writable></Fact>
@@ -285,7 +282,6 @@
     <Fact path="/sites/*/hasPavementDisturbance"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/hasElectricalComponents"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/hasCasing"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/inAirportAirspace"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/crossesRailroad"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/hasMajorTrafficImpact"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/requiresDetour"><Writable><Boolean/></Writable></Fact>
@@ -305,7 +301,7 @@
     <Fact path="/sites/*/railroadReviewRequired">
       <Derived><Any><Dependency path="../crossesRailroad"/><Dependency path="../gisIsNearRailroad"/></Any></Derived>
     </Fact>
-    <Fact path="/sites/*/typicalApplicationCount"><Writable><Int/></Writable></Fact>
+    <Fact path="/sites/*/typicalApplicationCount"><Writable><Int><Limit type="Min"><Int>0</Int></Limit><Limit type="Max"><Int>56</Int></Limit></Int></Writable></Fact>
     <Fact path="/sites/*/requiresTrafficControlPlan">
       <Derived><Any>
         <GreaterThanOrEqual><Left><Dependency path="../typicalApplicationCount"/></Left><Right><Int>5</Int></Right></GreaterThanOrEqual>
@@ -336,8 +332,8 @@
     </Fact>
     <Fact path="/sites/*/sizeEligible">
       <Derived><All>
-        <LessThanOrEqual><Left><Dependency path="../largestAntennaVolume"/></Left><Right><Int>6</Int></Right></LessThanOrEqual>
-        <LessThanOrEqual><Left><Dependency path="../otherEquipmentVolume"/></Left><Right><Int>28</Int></Right></LessThanOrEqual>
+        <LessThanOrEqual><Left><Dependency path="../largestAntennaVolume"/></Left><Right><Rational>6/1</Rational></Right></LessThanOrEqual>
+        <LessThanOrEqual><Left><Dependency path="../otherEquipmentVolume"/></Left><Right><Rational>28/1</Rational></Right></LessThanOrEqual>
       </All></Derived>
     </Fact>
     <Fact path="/sites/*/heightEligible">
@@ -347,13 +343,13 @@
       </LessThanOrEqual></Derived>
     </Fact>
     <Fact path="/sites/*/heightLimit"><Derived><GreaterOf><Add><Dependency path="../poleHeight"/><Int>10</Int></Add><Int>50</Int></GreaterOf></Derived></Fact>
-    <Fact path="/sites/*/permitEligible">
+    <Fact path="/sites/*/statutoryQualificationSatisfied">
       <Derived><All>
         <Dependency path="../sizeEligible"/>
         <Dependency path="../heightEligible"/>
-        <Dependency path="../gisJurisdictionEligible"/>
       </All></Derived>
     </Fact>
+    <Fact path="/sites/*/permitEligible"><Derived><All><Dependency path="../statutoryQualificationSatisfied"/><Dependency path="../gisJurisdictionEligible"/></All></Derived></Fact>
     <Fact path="/sites/*/constructionPlanRequired"><Derived><True/></Derived></Fact>
     <Fact path="/sites/*/isAttachment"><Derived><Equal><Left><Dependency path="../structureWork"/></Left><Right><String>attach</String></Right></Equal></Derived></Fact>
     <Fact path="/sites/*/isDelDotOwned"><Derived><Equal><Left><Dependency path="../poleOwner"/></Left><Right><String>deldot</String></Right></Equal></Derived></Fact>
@@ -417,39 +413,29 @@
     </Fact>
     <Fact path="/sites/*/wirelessNodeEligible"><Derived><All><Dependency path="../isWirelessNode"/><Dependency path="../permitEligible"/></All></Derived></Fact>
     <Fact path="/sites/*/wirelessNodeComplete"><Derived><All><Dependency path="../isWirelessNode"/><Dependency path="../readyToSubmit"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteGisEligible"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../gisJurisdictionEligible"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteCommonAnswersComplete"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../undergroundOwnerRequirementSatisfied"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteRequiresTrafficControlPlan"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../requiresTrafficControlPlan"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteFoundationDesignRequired"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../foundationDesignRequired"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteCasingSpecificationsRequired"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../casingSpecificationsRequired"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteAirportFormRequired"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../airportFormRequired"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteRailroadApprovalRequired"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../railroadApprovalRequired"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteRailroadProximityReviewRequired"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../railroadProximityReviewRequired"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteHasUndergroundWork"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../hasUndergroundWork"/></All></Derived></Fact>
-    <Fact path="/sites/*/projectSiteGisSpecialReviewRequired"><Derived><All><Dependency path="../isProjectSite"/><Dependency path="../gisSpecialReviewRequired"/></All></Derived></Fact>
     <Fact path="/allWirelessNodesEligible"><Derived><Equal>
       <Left><CollectionSize><Filter path="/sites"><Dependency path="wirelessNodeEligible"/></Filter></CollectionSize></Left>
       <Right><CollectionSize><Filter path="/sites"><Dependency path="isWirelessNode"/></Filter></CollectionSize></Right>
     </Equal></Derived></Fact>
     <Fact path="/allSitesGisJurisdictionEligible"><Derived><Equal>
-      <Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteGisEligible"/></Filter></CollectionSize></Left>
+      <Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="gisJurisdictionEligible"/></All></Filter></CollectionSize></Left>
       <Right><CollectionSize><Filter path="/sites"><Dependency path="isProjectSite"/></Filter></CollectionSize></Right>
     </Equal></Derived></Fact>
     <Fact path="/allSiteCommonAnswersComplete"><Derived><Equal>
-      <Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteCommonAnswersComplete"/></Filter></CollectionSize></Left>
+      <Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="undergroundOwnerRequirementSatisfied"/></All></Filter></CollectionSize></Left>
       <Right><CollectionSize><Filter path="/sites"><Dependency path="isProjectSite"/></Filter></CollectionSize></Right>
     </Equal></Derived></Fact>
     <Fact path="/anySiteRequiresTrafficControlPlan"><Derived><GreaterThan>
-      <Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteRequiresTrafficControlPlan"/></Filter></CollectionSize></Left>
+      <Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="requiresTrafficControlPlan"/></All></Filter></CollectionSize></Left>
       <Right><Int>0</Int></Right>
     </GreaterThan></Derived></Fact>
-    <Fact path="/anySiteHasUndergroundWork"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteHasUndergroundWork"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
-    <Fact path="/anySiteGisSpecialReviewRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteGisSpecialReviewRequired"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
-    <Fact path="/anySiteFoundationDesignRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteFoundationDesignRequired"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
-    <Fact path="/anySiteCasingSpecificationsRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteCasingSpecificationsRequired"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
-    <Fact path="/anySiteAirportFormRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteAirportFormRequired"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
-    <Fact path="/anySiteRailroadApprovalRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteRailroadApprovalRequired"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
-    <Fact path="/anySiteRailroadProximityReviewRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><Dependency path="projectSiteRailroadProximityReviewRequired"/></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteHasUndergroundWork"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="hasUndergroundWork"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteGisSpecialReviewRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="gisSpecialReviewRequired"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteFoundationDesignRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="foundationDesignRequired"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteCasingSpecificationsRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="casingSpecificationsRequired"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteAirportFormRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="airportFormRequired"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteRailroadApprovalRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="railroadApprovalRequired"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/anySiteRailroadProximityReviewRequired"><Derived><GreaterThan><Left><CollectionSize><Filter path="/sites"><All><Dependency path="isProjectSite"/><Dependency path="railroadProximityReviewRequired"/></All></Filter></CollectionSize></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
     <Fact path="/allWirelessNodesComplete"><Derived><Equal>
       <Left><CollectionSize><Filter path="/sites"><Dependency path="wirelessNodeComplete"/></Filter></CollectionSize></Left>
       <Right><CollectionSize><Filter path="/sites"><Dependency path="isWirelessNode"/></Filter></CollectionSize></Right>

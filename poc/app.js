@@ -10,9 +10,9 @@ let graph;
 
 const emptyContact = () => ({ company:'', firstName:'', lastName:'', email:'', phone:'', filer:'' });
 const emptyGis = () => ({ stateMaintained:'', limitedAccess:'', airportAirspace:'', nearRailroad:'' });
-const emptyNode = (index) => ({ id:crypto.randomUUID(), label:`Node ${index}`, siteId:'', locationRelationship:'', address:'', latitude:'', longitude:'', county:'', scope:'', antennaVolume:'', equipmentVolume:'', poleHeight:'', facilityHeight:'', structureWork:'', poleOwner:'', foundations:false, underground:false, undergroundOwnerMemberId:'', pavement:false, electrical:false, casing:false, airport:false, railroad:false, majorTrafficImpact:false, detour:false, complexConditions:false, pedestrianImpact:false, travelLaneOccupation:false, taCount:'', gis:emptyGis() });
+const emptyNode = (index) => ({ id:crypto.randomUUID(), label:`Node ${index}`, siteId:'', locationRelationship:'', address:'', latitude:'', longitude:'', county:'', scope:'', antennaVolume:'', equipmentVolume:'', poleHeight:'', facilityHeight:'', structureWork:'', poleOwner:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, majorTrafficImpact:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() });
 const emptyEntrance = () => ({ type:'', workType:'', planningApproval:'', adtEntering:'', adtExiting:'', peakHourTrips:'', priorUse:'', proposedUse:'', stakesDate:'', taxParcelId:'' });
-const defaultState = { activities:{utility:false,utilitySubtype:'',generalUtility:false,smallWireless:false,entrance:false}, applicationType:'', projectName:'', requestedNodeCount:'', contact:emptyContact(), utility:{ id:crypto.randomUUID(), publicUtility:'', utilityType:'', emergency:'', jurisdiction:'', address:'', latitude:'', longitude:'', county:'', disturbance:'', trafficImpact:'', duration:'', workType:'', description:'', foundations:false, underground:false, undergroundOwnerMemberId:'', pavement:false, electrical:false, casing:false, airport:false, railroad:false, detour:false, complexConditions:false, pedestrianImpact:false, travelLaneOccupation:false, taCount:'', gis:emptyGis() }, entrance:emptyEntrance(), nodes:[], currentNode:0, documentComplete:{}, attestationAccepted:false, submitted:false };
+const defaultState = { activities:{utility:false,utilitySubtype:'',generalUtility:false,smallWireless:false,entrance:false}, applicationType:'', projectName:'', requestedNodeCount:'', contact:emptyContact(), utility:{ id:crypto.randomUUID(), publicUtility:'', utilityType:'', emergency:'', jurisdiction:'', address:'', latitude:'', longitude:'', county:'', disturbance:'', trafficImpact:'', duration:'', workType:'', description:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() }, entrance:emptyEntrance(), nodes:[], currentNode:0, documentComplete:{}, attestationAccepted:false, submitted:false };
 let state = JSON.parse(localStorage.getItem('deldot-poc') || 'null') || structuredClone(defaultState);
 state.utility=Object.assign({},defaultState.utility,state.utility);
 state.utility.gis=Object.assign(emptyGis(),state.utility.gis);
@@ -41,7 +41,12 @@ function syncLegacyApplicationType(){ state.applicationType=[hasGeneralUtility()
 
 const graphSet = (path, value, type='string') => {
   if (value === '' || value === null || value === undefined) return;
-  const typed = type === 'int' ? Number(value) : type === 'boolean' ? Boolean(value) : value;
+  let typed = type === 'int' ? Number(value) : type === 'boolean' ? Boolean(value) : value;
+  if(type==='rational'){
+    const decimals=(String(value).split('.')[1]||'').length;
+    const denominator=10**decimals;
+    typed=FactGraph.RationalFactory(Math.round(Number(value)*denominator),denominator);
+  }
   graph.set__T__O__V(path, typed);
 };
 const graphResult = path => {
@@ -77,14 +82,10 @@ function rebuildGraph(){
     graphSet('/utilityWorkType',u.workType);
     graphSet('/utilityWorkDescription',u.description);
     if(hasValue(u.emergency)) graphSet('/utilityIsEmergency',u.emergency==='yes','boolean');
-    if(hasValue(u.jurisdiction)) graphSet('/utilityIsInDelDOTJurisdiction',u.jurisdiction!=='none','boolean');
+    graphSet('/utilityJurisdiction',u.jurisdiction);
     graphSet('/utilityGroundDisturbanceSqFt',u.disturbance,'int');
-    if(hasValue(u.trafficImpact)){
-      graphSet('/utilityHasMajorTrafficImpact',u.trafficImpact==='major','boolean');
-      graphSet('/utilityHasTrafficImpact',u.trafficImpact!=='none','boolean');
-    }
-    if(hasValue(u.duration)) graphSet('/utilityLongerThanOneDay',u.duration==='longer','boolean');
-    graphSet('/utilityTypicalApplicationCount',u.taCount,'int');
+    graphSet('/utilityTrafficImpact',u.trafficImpact);
+    graphSet('/utilityDuration',u.duration);
   }
   if(hasEntrance()){
     const e=state.entrance;
@@ -109,9 +110,9 @@ function rebuildGraph(){
     const effectiveLocation=sharesProjectLocation?state.utility:site;
     const values=isNode?{
       siteId:site.siteId,usesProjectSiteLocation:[hasSharedProjectSite()?(hasValue(site.locationRelationship)?sharesProjectLocation:''):false,'boolean'],address:effectiveLocation.address,latitude:effectiveLocation.latitude,longitude:effectiveLocation.longitude,county:effectiveLocation.county,scope:site.scope,structureWork:site.structureWork,poleOwner:site.poleOwner,
-      largestAntennaVolume:[site.antennaVolume,'int'],otherEquipmentVolume:[site.equipmentVolume,'int'],poleHeight:[site.poleHeight,'int'],facilityHeight:[site.facilityHeight,'int'],typicalApplicationCount:[site.taCount,'int'],
+      largestAntennaVolume:[site.antennaVolume,'rational'],otherEquipmentVolume:[site.equipmentVolume,'rational'],poleHeight:[site.poleHeight,'int'],facilityHeight:[site.facilityHeight,'int'],typicalApplicationCount:[site.taCount,'int'],
       hasFoundation:[site.foundations,'boolean'],hasUndergroundWork:[site.underground,'boolean'],undergroundOwnerMemberId:site.undergroundOwnerMemberId,hasPavementDisturbance:[site.pavement,'boolean'],hasElectricalComponents:[site.electrical,'boolean'],hasCasing:[site.casing,'boolean'],crossesRailroad:[site.railroad,'boolean'],hasMajorTrafficImpact:[site.majorTrafficImpact,'boolean'],requiresDetour:[site.detour,'boolean'],hasComplexFieldConditions:[site.complexConditions,'boolean'],impactsPedestrianAccess:[site.pedestrianImpact,'boolean'],occupiesTravelLane:[site.travelLaneOccupation,'boolean']
-    }:{siteId:'Utility site',address:site.address,latitude:site.latitude,longitude:site.longitude,county:site.county,hasFoundation:[site.foundations,'boolean'],hasUndergroundWork:[site.underground,'boolean'],undergroundOwnerMemberId:site.undergroundOwnerMemberId,hasPavementDisturbance:[site.pavement,'boolean'],hasElectricalComponents:[site.electrical,'boolean'],hasCasing:[site.casing,'boolean'],crossesRailroad:[site.railroad,'boolean'],requiresDetour:[site.detour,'boolean'],hasComplexFieldConditions:[site.complexConditions,'boolean'],impactsPedestrianAccess:[site.pedestrianImpact,'boolean'],occupiesTravelLane:[site.travelLaneOccupation,'boolean'],typicalApplicationCount:[site.taCount,'int']};
+    }:{siteId:'Utility site',address:site.address,latitude:site.latitude,longitude:site.longitude,county:site.county,hasFoundation:[site.foundations,'boolean'],hasUndergroundWork:[site.underground,'boolean'],undergroundOwnerMemberId:site.undergroundOwnerMemberId,hasPavementDisturbance:[site.pavement,'boolean'],hasElectricalComponents:[site.electrical,'boolean'],hasCasing:[site.casing,'boolean'],crossesRailroad:[site.railroad,'boolean'],hasMajorTrafficImpact:[hasValue(site.trafficImpact)?site.trafficImpact==='major':null,'boolean'],requiresDetour:[site.detour,'boolean'],hasComplexFieldConditions:[site.complexConditions,'boolean'],impactsPedestrianAccess:[site.pedestrianImpact,'boolean'],occupiesTravelLane:[site.travelLaneOccupation,'boolean'],typicalApplicationCount:[site.taCount,'int']};
     values.isWirelessNode=[isNode,'boolean']; values.isProjectSite=[!isNode,'boolean'];
     Object.entries(values).forEach(([name,entry])=>graphSet(`${p}/${name}`,...(Array.isArray(entry)?entry:[entry])));
     const gis=(sharesProjectLocation?state.utility:site).gis||emptyGis();
@@ -192,86 +193,83 @@ function validationFacts(){
   const f=facts(), u=state.utility;
   const requirements=[
     requirement('/atLeastOneActivitySelected','Select at least one project activity',hasAnyActivity(),routeStep('activities')),
-    requirement('/utilitySubtypeSelected','Select at least one type of utility work',!hasUtilityActivity()||hasGeneralUtility()||hasWireless(),routeStep('utilityKind')),
-    requirement('/contactCompanyComplete','Enter the company name',hasValue(state.contact.company),routeStep('contact')),
-    requirement('/contactFirstNameComplete','Enter the contact first name',hasValue(state.contact.firstName),routeStep('contact')),
-    requirement('/contactLastNameComplete','Enter the contact last name',hasValue(state.contact.lastName),routeStep('contact')),
-    requirement('/contactEmailComplete','Enter a valid email address',/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.contact.email),routeStep('contact'),'Email must have a valid address format'),
-    requirement('/contactPhoneComplete','Enter the contact phone number',hasValue(state.contact.phone),routeStep('contact')),
-    requirement('/contactFilerTypeComplete','Choose who is filing',hasValue(state.contact.filer),routeStep('contact')),
-    requirement('/projectNameComplete','Enter a project name',hasValue(state.projectName),routeStep('project'))
+    requirement('/utilitySubtypeSelectionValid','Select at least one type of utility work',graphBoolean('/utilitySubtypeSelectionValid'),routeStep('utilityKind')),
+    requirement('/contactCompany','Enter the company name',hasValue(graphResult('/contactCompany')),routeStep('contact')),
+    requirement('/contactFirstName','Enter the contact first name',hasValue(graphResult('/contactFirstName')),routeStep('contact')),
+    requirement('/contactLastName','Enter the contact last name',hasValue(graphResult('/contactLastName')),routeStep('contact')),
+    requirement('/contactEmail','Enter a valid email address',hasValue(graphResult('/contactEmail')),routeStep('contact'),'Validated by the graph email limit'),
+    requirement('/contactPhone','Enter the contact phone number',hasValue(graphResult('/contactPhone')),routeStep('contact')),
+    requirement('/contactFilerType','Choose who is filing',hasValue(graphResult('/contactFilerType')),routeStep('contact')),
+    requirement('/projectName','Enter a project name',hasValue(graphResult('/projectName')),routeStep('project'))
   ];
   if(hasWireless()){
-    requirements.push(requirement('/requestedWirelessNodeCountValid','Enter a node count from 1 to 50',Number.isInteger(Number(state.requestedNodeCount))&&Number(state.requestedNodeCount)>=1&&Number(state.requestedNodeCount)<=50,routeStep('project'),'Each node requires a separate permit and $100 fee'));
+    requirements.push(requirement('/requestedWirelessNodeCount','Enter a node count from 1 to 50',hasValue(graphResult('/requestedWirelessNodeCount')),routeStep('project'),'Validated by graph limits; each node requires a separate permit and $100 fee'));
     state.nodes.forEach((n,index)=>{
       const location=nodeLocation(n);
-      const prefix=`/sites/#${index+1}`;
+      const prefix=`/sites/#${n.id}`;
       const overviewStage=index===state.currentNode?routeStep('wirelessOverview'):null;
       const constructionStage=index===state.currentNode?routeStep('wirelessConstruction'):null;
       requirements.push(
-        requirement(`${prefix}/wireless/siteIdComplete`,`Node ${index+1}: enter the carrier site ID`,hasValue(n.siteId),overviewStage),
-        requirement(`${prefix}/wireless/locationSourceComplete`,`Node ${index+1}: choose whether it uses the project site`,!hasSharedProjectSite()||hasValue(n.locationRelationship),overviewStage),
-        requirement(`${prefix}/common/addressComplete`,`Node ${index+1}: enter the address or cross-streets`,hasValue(location.address),overviewStage),
-        requirement(`${prefix}/common/latitudeComplete`,`Node ${index+1}: enter the latitude`,hasValue(location.latitude),overviewStage),
-        requirement(`${prefix}/common/longitudeComplete`,`Node ${index+1}: enter the longitude`,hasValue(location.longitude),overviewStage),
-        requirement(`${prefix}/common/countyComplete`,`Node ${index+1}: enter the county`,hasValue(location.county),overviewStage),
-        requirement(`${prefix}/wireless/scopeComplete`,`Node ${index+1}: choose the scope`,hasValue(n.scope),overviewStage),
-        requirement(`${prefix}/wireless/structureWorkComplete`,`Node ${index+1}: choose the structure work`,hasValue(n.structureWork),overviewStage),
-        requirement(`${prefix}/wireless/antennaVolumeValid`,`Node ${index+1}: enter an antenna volume from 0 to 6 cu. ft.`,hasValue(n.antennaVolume)&&Number(n.antennaVolume)>=0&&Number(n.antennaVolume)<=6,overviewStage,'Required for small wireless qualification'),
-        requirement(`${prefix}/wireless/equipmentVolumeValid`,`Node ${index+1}: enter other equipment volume from 0 to 28 cu. ft.`,hasValue(n.equipmentVolume)&&Number(n.equipmentVolume)>=0&&Number(n.equipmentVolume)<=28,overviewStage,'Required for small wireless qualification'),
-        requirement(`${prefix}/wireless/poleHeightValid`,`Node ${index+1}: enter the pole height`,hasValue(n.poleHeight)&&Number(n.poleHeight)>=0,overviewStage),
-        requirement(`${prefix}/wireless/facilityHeightValid`,`Node ${index+1}: enter an eligible facility height`,hasValue(n.facilityHeight)&&hasValue(n.poleHeight)&&Number(n.facilityHeight)<=Math.max(Number(n.poleHeight)+10,50),overviewStage,'Compared with the simplified statutory height limit'),
-        requirement(`${prefix}/wireless/poleOwnerComplete`,`Node ${index+1}: choose the structure owner`,hasValue(n.poleOwner),constructionStage),
-        requirement(`${prefix}/common/undergroundOwnerRequirementSatisfied`,`Node ${index+1}: enter the underground facility owner’s member ID`,!n.underground||hasValue(n.undergroundOwnerMemberId),constructionStage,'Required when underground facilities are proposed'),
-        requirement(`${prefix}/common/typicalApplicationCountValid`,`Node ${index+1}: enter the number of Typical Applications`,hasValue(n.taCount)&&Number(n.taCount)>=0,constructionStage)
+        requirement(`${prefix}/siteId`,`Node ${index+1}: enter the carrier site ID`,hasValue(graphResult(`${prefix}/siteId`)),overviewStage),
+        requirement(`${prefix}/usesProjectSiteLocation`,`Node ${index+1}: choose whether it uses the project site`,!hasSharedProjectSite()||hasValue(n.locationRelationship),overviewStage),
+        requirement(`${prefix}/address`,`Node ${index+1}: enter the address or cross-streets`,hasValue(graphResult(`${prefix}/address`)),overviewStage),
+        requirement(`${prefix}/latitude`,`Node ${index+1}: enter the latitude`,hasValue(graphResult(`${prefix}/latitude`)),overviewStage),
+        requirement(`${prefix}/longitude`,`Node ${index+1}: enter the longitude`,hasValue(graphResult(`${prefix}/longitude`)),overviewStage),
+        requirement(`${prefix}/county`,`Node ${index+1}: enter the county`,hasValue(graphResult(`${prefix}/county`)),overviewStage),
+        requirement(`${prefix}/scope`,`Node ${index+1}: choose the scope`,hasValue(graphResult(`${prefix}/scope`)),overviewStage),
+        requirement(`${prefix}/structureWork`,`Node ${index+1}: choose the structure work`,hasValue(graphResult(`${prefix}/structureWork`)),overviewStage),
+        requirement(`${prefix}/sizeEligible`,`Node ${index+1}: enter qualifying equipment volumes`,graphBoolean(`${prefix}/sizeEligible`),overviewStage,'Derived small-wireless size qualification'),
+        requirement(`${prefix}/poleHeight`,`Node ${index+1}: enter the pole height`,hasValue(graphResult(`${prefix}/poleHeight`)),overviewStage),
+        requirement(`${prefix}/heightEligible`,`Node ${index+1}: enter an eligible facility height`,graphBoolean(`${prefix}/heightEligible`),overviewStage,'Derived statutory height qualification'),
+        requirement(`${prefix}/poleOwner`,`Node ${index+1}: choose the structure owner`,hasValue(graphResult(`${prefix}/poleOwner`)),constructionStage),
+        requirement(`${prefix}/undergroundOwnerRequirementSatisfied`,`Node ${index+1}: enter the underground facility owner’s member ID`,graphBoolean(`${prefix}/undergroundOwnerRequirementSatisfied`),constructionStage,'Derived when underground facilities are proposed'),
+        requirement(`${prefix}/typicalApplicationCount`,`Node ${index+1}: enter the number of Typical Applications`,hasValue(graphResult(`${prefix}/typicalApplicationCount`)),constructionStage)
       );
     });
   }
   if(hasGeneralUtility()||hasEntrance()) requirements.push(
-    requirement('/sites/shared/addressComplete','Enter the work address or nearest cross-streets',hasValue(u.address),routeStep('site')),
-    requirement('/sites/shared/latitudeComplete','Enter the work latitude',hasValue(u.latitude),routeStep('site')),
-    requirement('/sites/shared/longitudeComplete','Enter the work longitude',hasValue(u.longitude),routeStep('site')),
-    requirement('/sites/shared/countyComplete','Enter the work county',hasValue(u.county),routeStep('site'))
+    requirement(`/sites/#${u.id}/address`,'Enter the work address or nearest cross-streets',hasValue(graphResult(`/sites/#${u.id}/address`)),routeStep('site')),
+    requirement(`/sites/#${u.id}/latitude`,'Enter the work latitude',hasValue(graphResult(`/sites/#${u.id}/latitude`)),routeStep('site')),
+    requirement(`/sites/#${u.id}/longitude`,'Enter the work longitude',hasValue(graphResult(`/sites/#${u.id}/longitude`)),routeStep('site')),
+    requirement(`/sites/#${u.id}/county`,'Enter the work county',hasValue(graphResult(`/sites/#${u.id}/county`)),routeStep('site'))
   );
   if(hasGeneralUtility()){
     requirements.push(
-      requirement('/utilityIsPublicComplete','Choose whether this is a public utility',hasValue(u.publicUtility),routeStep('utility')),
-      requirement('/utilityTypeComplete','Choose the utility type',hasValue(u.utilityType),routeStep('utility')),
-      requirement('/utilityEmergencyComplete','Choose whether this is emergency work',hasValue(u.emergency),routeStep('utility')),
-      requirement('/utilityJurisdictionComplete','Choose where the work will occur',hasValue(u.jurisdiction),routeStep('utility')),
-      requirement('/utilityDisturbanceValid','Enter ground disturbance, including 0',hasValue(u.disturbance)&&Number(u.disturbance)>=0,routeStep('utility')),
-      requirement('/utilityTrafficImpactComplete','Choose the traffic impact',hasValue(u.trafficImpact),routeStep('utility')),
-      requirement('/utilityDurationComplete','Choose the work duration',hasValue(u.duration),routeStep('utility')),
-      requirement('/utilityPermitOutcomeAllowed','Answers must produce a DelDOT permit',f.canProceed,routeStep('utility'),'The graph may instead conclude that no permit is needed'),
-      requirement('/utilityWorkTypeComplete','Choose the scope of work',hasValue(u.workType),routeStep('utility')),
-      requirement('/utilityDescriptionComplete','Describe the proposed work',hasValue(u.description),routeStep('utility')),
-      requirement('/sites/shared/undergroundOwnerRequirementSatisfied','Enter the underground facility owner’s member ID',!u.underground||hasValue(u.undergroundOwnerMemberId),routeStep('utility'),'Required when underground facilities are proposed'),
-      requirement('/utilityTypicalApplicationCountValid','Enter the number of Typical Applications',hasValue(u.taCount)&&Number(u.taCount)>=0,routeStep('utility'))
+      requirement('/utilityIsPublic','Choose whether this is a public utility',hasValue(graphResult('/utilityIsPublic')),routeStep('utility')),
+      requirement('/utilityType','Choose the utility type',hasValue(graphResult('/utilityType')),routeStep('utility')),
+      requirement('/utilityIsEmergency','Choose whether this is emergency work',hasValue(graphResult('/utilityIsEmergency')),routeStep('utility')),
+      requirement('/utilityJurisdiction','Choose where the work will occur',hasValue(graphResult('/utilityJurisdiction')),routeStep('utility')),
+      requirement('/utilityGroundDisturbanceSqFt','Enter ground disturbance, including 0',hasValue(graphResult('/utilityGroundDisturbanceSqFt')),routeStep('utility')),
+      requirement('/utilityTrafficImpact','Choose the traffic impact',hasValue(graphResult('/utilityTrafficImpact')),routeStep('utility')),
+      requirement('/utilityDuration','Choose the work duration',hasValue(graphResult('/utilityDuration')),routeStep('utility')),
+      requirement('/utilityPermitEligible','Answers must produce a DelDOT permit',graphBoolean('/utilityPermitEligible'),routeStep('utility'),'Derived from the current application and GIS facts'),
+      requirement('/utilityWorkType','Choose the scope of work',hasValue(graphResult('/utilityWorkType')),routeStep('utility')),
+      requirement('/utilityWorkDescription','Describe the proposed work',hasValue(graphResult('/utilityWorkDescription')),routeStep('utility')),
+      requirement(`/sites/#${u.id}/undergroundOwnerRequirementSatisfied`,'Enter the underground facility owner’s member ID',graphBoolean(`/sites/#${u.id}/undergroundOwnerRequirementSatisfied`),routeStep('utility'),'Derived when underground facilities are proposed'),
+      requirement(`/sites/#${u.id}/typicalApplicationCount`,'Enter the number of Typical Applications',hasValue(graphResult(`/sites/#${u.id}/typicalApplicationCount`)),routeStep('utility'))
     );
   }
     if(hasEntrance()){
       const e=state.entrance;
       requirements.push(
-        requirement('/entranceTypeComplete','Choose the entrance type',hasValue(e.type),routeStep('entrance')),
-        requirement('/entranceWorkTypeComplete','Choose the entrance work',hasValue(e.workType),routeStep('entrance')),
-        requirement('/entrancePlanningApprovalComplete','Answer whether planning approval was received',hasValue(e.planningApproval),routeStep('entrance')),
-        requirement('/entranceAdtEnteringValid','Enter daily traffic entering, including 0',hasValue(e.adtEntering)&&Number(e.adtEntering)>=0,routeStep('entrance')),
-        requirement('/entranceAdtExitingValid','Enter daily traffic exiting, including 0',hasValue(e.adtExiting)&&Number(e.adtExiting)>=0,routeStep('entrance')),
-        requirement('/entrancePeakHourTripsValid','Enter peak-hour trips, including 0',hasValue(e.peakHourTrips)&&Number(e.peakHourTrips)>=0,routeStep('entrance')),
-        requirement('/entrancePriorUseComplete','Enter the prior property use',hasValue(e.priorUse),routeStep('entrance')),
-        requirement('/entranceProposedUseComplete','Enter the proposed property use',hasValue(e.proposedUse),routeStep('entrance')),
-        requirement('/entranceStakesDateComplete','Enter the date entrance stakes will be set',hasValue(e.stakesDate),routeStep('entrance')),
-        requirement('/entranceTaxParcelIdComplete','Enter the tax parcel ID',hasValue(e.taxParcelId),routeStep('entrance'))
+        requirement('/entranceType','Choose the entrance type',hasValue(graphResult('/entranceType')),routeStep('entrance')),
+        requirement('/entranceWorkType','Choose the entrance work',hasValue(graphResult('/entranceWorkType')),routeStep('entrance')),
+        requirement('/entrancePlanningApprovalReceived','Answer whether planning approval was received',hasValue(graphResult('/entrancePlanningApprovalReceived')),routeStep('entrance')),
+        requirement('/entranceExistingAdtEntering','Enter daily traffic entering, including 0',hasValue(graphResult('/entranceExistingAdtEntering')),routeStep('entrance')),
+        requirement('/entranceExistingAdtExiting','Enter daily traffic exiting, including 0',hasValue(graphResult('/entranceExistingAdtExiting')),routeStep('entrance')),
+        requirement('/entrancePeakHourTrips','Enter peak-hour trips, including 0',hasValue(graphResult('/entrancePeakHourTrips')),routeStep('entrance')),
+        requirement('/entrancePriorUse','Enter the prior property use',hasValue(graphResult('/entrancePriorUse')),routeStep('entrance')),
+        requirement('/entranceProposedUse','Enter the proposed property use',hasValue(graphResult('/entranceProposedUse')),routeStep('entrance')),
+        requirement('/entranceStakesDate','Enter the date entrance stakes will be set',hasValue(graphResult('/entranceStakesDate')),routeStep('entrance')),
+        requirement('/entranceTaxParcelId','Enter the tax parcel ID',hasValue(graphResult('/entranceTaxParcelId')),routeStep('entrance'))
       );
     }
   graphDocumentRecords().forEach(record=>{
     const stage=record.scope==='node'&&record.index!==state.currentNode?null:record.scope==='project'&&hasWireless()&&state.currentNode>0?null:documentStep();
-    requirements.push(requirement(`/documents/${record.scope}/${record.label}`,`Attach ${record.label}`,state.documentComplete[record.key],stage,graphResult(record.reason)||'Required by the current fact graph'));
+    requirements.push(requirement(record.attached,`Attach ${record.label}`,graphBoolean(record.attached),stage,graphResult(record.reason)||'Required by the current fact graph'));
   });
   requirements.push(requirement('/attestationsAccepted','Accept all applicable attestations',state.attestationAccepted,reviewStep()));
   const substantive=requirements.filter(r=>r.path!=='/attestationsAccepted');
-  const sharedRequirements=substantive.filter(r=>!r.path.startsWith('/utility')&&!r.path.startsWith('/sites'));
-  const commonSiteRequirements=substantive.filter(r=>r.path.startsWith('/sites')&&r.path.includes('/common/'));
   const utilityRequirements=substantive.filter(r=>r.path.startsWith('/utility'));
   const wirelessRequirements=substantive.filter(r=>r.path.startsWith('/sites')&&!r.path.includes('/common/'));
   const utilityBranchSatisfied=!hasGeneralUtility()||utilityRequirements.every(r=>r.satisfied);
@@ -324,15 +322,12 @@ function wirelessOverviewScreen(){
   return intro('Node overview',`Node ${state.currentNode+1} of ${state.nodes.length}`,'Provide the equipment and support structure information for this node. Another location is collected only when this node is somewhere else.')+nodeProgress()+`<div class="field-grid">${field('Carrier site ID','siteId',n.siteId)}${locationChoice}${locationFields}${select('Scope','scope',[['new','New installation'],['modify','Modification / upgrade']],n.scope)}${select('Structure work','structureWork',[['attach','Attach to existing structure'],['replace','Replace structure'],['new','New stand-alone pole']],n.structureWork)}${field('Largest antenna volume (cu. ft.)','antennaVolume',n.antennaVolume,'number','min="0" step="0.1"')}${field('Other equipment total (cu. ft.)','equipmentVolume',n.equipmentVolume,'number','min="0" step="0.1"')}${field('Pole / structure height (ft.)','poleHeight',n.poleHeight,'number','min="0"')}${field('Highest facility elevation (ft.)','facilityHeight',n.facilityHeight,'number','min="0"')}</div>`;
 }
 
-function utilityEligibility(){ const u=state.utility; const utilityQuestions=hasGeneralUtility()?`${select('Public utility?','publicUtility',[['yes','Yes'],['no','No — private / unfranchised']],u.publicUtility)}${select('Utility type','utilityType',[['water','Water'],['sewer','Sewer'],['gas','Gas / propane'],['power','Power / electrical'],['telephone','Telephone / cable'],['fiber','Fiber-optic']],u.utilityType)}${select('Where will utility work occur?','jurisdiction',[['row','State-maintained right-of-way'],['easement','Permanent DelDOT easement'],['aerial','Aerial crossing over right-of-way'],['none','None of these']],u.jurisdiction)}${select('Was the utility work performed as an emergency?','emergency',[['no','No'],['yes','Yes']],u.emergency)}${field('Ground disturbance (sq. ft.)','disturbance',u.disturbance,'number','min="0"')}${select('Traffic impact','trafficImpact',[['none','None'],['lane','Lane / shoulder occupation'],['major','Detour, complex site, or pedestrian impact']],u.trafficImpact)}${select('Total duration','duration',[['day','Up to 1 day'],['longer','Longer than 1 working day']],u.duration)}`:''; const siteName=hasEntrance()&&hasGeneralUtility()?'Shared project site':hasEntrance()?'Entrance site':'Utility site'; const title=hasEntrance()&&!hasGeneralUtility()?'Where will the entrance be located?':'Where will the work occur?'; const help=hasWireless()?'Enter this location once. Each wireless node can reuse its address, county, latitude, longitude, and GIS results—or specify a different site.':'GIS facts for this location can affect permit requirements.'; return intro(siteName,title,help) + `<div class="field-grid">${field('Address or nearest cross-streets','address',u.address)}${field('County','county',u.county)}${field('Latitude','latitude',u.latitude,'number','step="any"')}${field('Longitude','longitude',u.longitude,'number','step="any"')}${utilityQuestions}</div>`; }
-function utilityDetails(){ const u=state.utility; return intro('Work details',facts().permitType,'Tell us what work you are proposing. Your answers will help us identify the plans and approvals you need to provide.') + `${select('Scope of work','workType',[['simple','Above ground — simple work'],['pole','Above ground — new or revamped poles'],['underground','Underground']],u.workType)}<div class="field"><label>Describe the proposed work</label><textarea name="description">${u.description}</textarea></div><fieldset><legend>Construction elements</legend>${checkbox('foundations','New pole / support structure foundations',u.foundations)}${checkbox('underground','Underground service feeds or conduit runs',u.underground)}${u.underground?field('Underground facility owner’s Delmarva 811 member ID','undergroundOwnerMemberId',u.undergroundOwnerMemberId):''}${checkbox('pavement','Pavement disturbance in travel lanes or shoulders',u.pavement)}${checkbox('electrical','New electrical components',u.electrical)}${checkbox('casing','Casing',u.casing)}</fieldset><fieldset><legend>Sensitive areas</legend>${checkbox('airport','Airport airspace',u.airport)}${checkbox('railroad','Crossing over or under a railroad',u.railroad)}</fieldset><fieldset><legend>Traffic-control conditions</legend>${checkbox('detour','Work requires a detour of roadway traffic',u.detour)}${checkbox('complexConditions','Field conditions are complicated by a bridge, sharp curve, sight distance, or atypical geometry',u.complexConditions)}${checkbox('pedestrianImpact','Work substantially impacts an established pedestrian access route',u.pedestrianImpact)}${checkbox('travelLaneOccupation','Work is performed over a travel lane, turn lane, or bike lane',u.travelLaneOccupation)}</fieldset>${field('Number of DE MUTCD Typical Applications','taCount',u.taCount,'number','min="0" max="56"')}`; }
 function entranceDetails(){ const e=state.entrance; const outcomes=[hasGeneralUtility()?facts().permitType:'',hasWireless()?`${state.nodes.length} small wireless permit${state.nodes.length===1?'':'s'}`:'','Entrance Permit'].filter(Boolean); return intro('Entrance activity','Tell us about the proposed entrance','These answers are evaluated with the shared project, site, GIS, construction-impact, and applicant facts already supplied.') + `<div class="permit-package-banner"><strong>Permits identified for this project</strong><span>${outcomes.join(' + ')}</span></div><div class="field-grid">${select('Entrance type','type',[['commercial','Commercial'],['subdivision','Subdivision'],['industrial','Industrial'],['solar','Solar farm']],e.type)}${select('Entrance work','entranceWorkType',[['new','Construct a new entrance'],['modify','Modify an existing entrance'],['relocate','Relocate an existing entrance']],e.workType)}${select('Planning and zoning approval received?','planningApproval',[['yes','Yes'],['no','No']],e.planningApproval)}${field('Tax parcel ID','taxParcelId',e.taxParcelId)}${field('Existing daily traffic entering','adtEntering',e.adtEntering,'number','min="0"')}${field('Existing daily traffic exiting','adtExiting',e.adtExiting,'number','min="0"')}${field('Peak-hour trips','peakHourTrips',e.peakHourTrips,'number','min="0"')}${field('Date entrance stakes will be set','stakesDate',e.stakesDate,'date')}${field('Prior property use','priorUse',e.priorUse)}${field('Proposed property use','proposedUse',e.proposedUse)}</div>`; }
-function wirelessOverview(){ let n=state.nodes[state.currentNode]; if(!n){ state.nodes.push(emptyNode(1)); n=state.nodes[0]; } const canReuse=hasSharedProjectSite(); const locationChoice=canReuse?select('Where is this node?','locationRelationship',[['shared','At the project site entered earlier'],['different','At a different location']],n.locationRelationship):''; const locationFields=!canReuse||n.locationRelationship==='different'?`${field('Address or nearest cross-streets','address',n.address)}${field('Latitude','latitude',n.latitude,'number','step="any"')}${field('Longitude','longitude',n.longitude,'number','step="any"')}${field('County','county',n.county)}`:n.locationRelationship==='shared'?`<div class="notice"><strong>Using the project site</strong><br>${state.utility.address||'Address not entered'} · ${state.utility.county||'County not entered'} · ${state.utility.latitude||'Latitude not entered'}, ${state.utility.longitude||'Longitude not entered'}<br><span class="hint">The node also uses this site’s GIS results.</span></div>`:''; return intro('Node overview',`Node ${state.currentNode+1} of ${state.nodes.length}`,'Provide the equipment and support structure information for this node. Enter another location only when it differs from the project site.') + nodeProgress() + `<div class="field-grid">${field('Carrier site ID','siteId',n.siteId)}${locationChoice}${locationFields}${select('Scope','scope',[['new','New installation'],['modify','Modification / upgrade']],n.scope)}${select('Structure work','structureWork',[['attach','Attach to existing structure'],['replace','Replace structure'],['new','New stand-alone pole']],n.structureWork)}${field('Largest antenna volume (cu. ft.)','antennaVolume',n.antennaVolume,'number','min="0" step="0.1"')}${field('Other equipment total (cu. ft.)','equipmentVolume',n.equipmentVolume,'number','min="0" step="0.1"')}${field('Pole / structure height (ft.)','poleHeight',n.poleHeight,'number','min="0"')}${field('Highest facility elevation (ft.)','facilityHeight',n.facilityHeight,'number','min="0"')}</div>`; }
 function nodeProgress(){ return `<div class="node-bar"><span>${state.nodes.map((n,i)=>`<span class="pill ${i===state.currentNode?'current':''}">${i+1}${n.siteId?` · ${n.siteId}`:''}</span>`).join(' ')}</span><strong>${money.format(state.nodes.length*100)}</strong></div>`; }
 function wirelessConstruction(){ const n=state.nodes[state.currentNode]; return intro('Construction',`Construction for Node ${state.currentNode+1}`,'Tell us about the structure, construction activities, nearby sensitive areas, and planned traffic control.') + nodeProgress() + `${select('Pole / support structure owner','poleOwner',[['utility','Utility company'],['wip','Wireless infrastructure provider'],['deldot','DelDOT'],['other','Other private entity']],n.poleOwner)}<fieldset><legend>Construction elements</legend>${checkbox('foundations','New pole / support structure foundations',n.foundations)}${checkbox('underground','Underground service feeds or conduit runs',n.underground)}${n.underground?field('Underground facility owner’s Delmarva 811 member ID','undergroundOwnerMemberId',n.undergroundOwnerMemberId):''}${checkbox('pavement','Pavement disturbance in travel lanes or shoulders',n.pavement)}${checkbox('electrical','New electrical components',n.electrical)}${checkbox('casing','Casing',n.casing)}</fieldset><fieldset><legend>Sensitive areas</legend>${checkbox('airport','Airport airspace',n.airport)}${checkbox('railroad','Crossing over or under a railroad',n.railroad)}</fieldset><fieldset><legend>Traffic-control conditions</legend>${checkbox('detour','Work requires a detour of roadway traffic',n.detour)}${checkbox('complexConditions','Field conditions are complicated by a bridge, sharp curve, sight distance, or atypical geometry',n.complexConditions)}${checkbox('pedestrianImpact','Work substantially impacts an established pedestrian access route',n.pedestrianImpact)}${checkbox('travelLaneOccupation','Work is performed over a travel lane, turn lane, or bike lane',n.travelLaneOccupation)}</fieldset>${field('Number of DE MUTCD Typical Applications','taCount',n.taCount,'number','min="0" max="56"')}`; }
 function documentKey(name){ return `utility:application:${name}`; }
 const permitNameFor = permit => permit==='utility'?(facts().permitType==='Not determined'?'Permit determination pending':facts().permitType):permit==='wireless'?'Small Wireless Facility Permit':'Entrance Permit';
-function documentInputs(records){ return `<ul class="documents">${records.map(record=>{const consumers=record.requiredBy.map(permitNameFor).join(' · '); const reason=graphResult(record.reason); const triggerPaths=record.triggerPaths||Object.values(record.consumers||{}).filter(path=>graphBoolean(path)); const triggers=triggerPaths.join(' · '); return `<li><strong>${record.label}</strong><span class="document-consumers">Required for ${consumers}</span>${reason?`<span class="document-reason">Why required: ${reason}</span>`:''}${triggers?`<details class="document-trace"><summary>View graph trace</summary><code>${triggers}</code><br><code>${record.reason}</code></details>`:''}<input type="file" data-document-key="${record.key}" aria-label="Upload ${record.label}">${state.documentComplete[record.key]?'<span class="hint">Attached</span>':''}</li>`;}).join('')}</ul>`; }
+function documentInputs(records){ return `<ul class="documents">${records.map(record=>{const consumers=record.requiredBy.map(permitNameFor).join(' · '); const reason=graphResult(record.reason); const triggerPaths=record.triggerPaths||Object.values(record.consumers||{}).filter(path=>graphBoolean(path)); const triggers=triggerPaths.join(' · '); const trace=triggerPaths.map(path=>`${path}: ${graphExplanation(path)}`).join(' | '); return `<li><strong>${record.label}</strong><span class="document-consumers">Required for ${consumers}</span>${reason?`<span class="document-reason">Why required: ${reason}</span>`:''}${triggers?`<details class="document-trace"><summary>View graph trace</summary><code>${escapeHtml(trace)}</code></details>`:''}<input type="file" data-document-key="${record.key}" aria-label="Upload ${record.label}">${state.documentComplete[record.key]?'<span class="hint">Attached</span>':''}</li>`;}).join('')}</ul>`; }
 function documentsScreen(){ const records=graphDocumentRecords(); const sections=[]; const projectRecords=records.filter(record=>record.scope==='project'); const utilityRecords=records.filter(record=>record.scope==='permit'&&record.requiredBy.includes('utility')); const entranceRecords=records.filter(record=>record.scope==='permit'&&record.requiredBy.includes('entrance')); const nodeRecords=records.filter(record=>record.scope==='node'&&record.index===state.currentNode);
   if(hasWireless()) sections.push(nodeProgress()+`<p class="hint">You are completing documents for Node ${state.currentNode+1} of ${state.nodes.length}.${state.currentNode<state.nodes.length-1?` Node ${state.currentNode+2} documents come next.`:''}</p>`);
   if(projectRecords.length&&(!hasWireless()||state.currentNode===0)) sections.push(`<h3>Shared project documents</h3><p class="hint">Each document is uploaded once and applied to every permit listed below.</p>${documentInputs(projectRecords)}`);
@@ -365,11 +360,10 @@ function bindValues(form){ const data=new FormData(form); const route=currentRou
   if(route==='documents') form.querySelectorAll('input[type=file][data-document-key]').forEach(input=>{ if(input.files?.length) state.documentComplete[input.dataset.documentKey]=true; });
   if(route==='review') state.attestationAccepted=data.has('attest'); save(); }
 function save(){ rebuildGraph(); localStorage.setItem('deldot-poc',JSON.stringify(state)); }
-function wirelessNodeDetailsComplete(n){ const location=nodeLocation(n); return Boolean(n&&(!hasSharedProjectSite()||hasValue(n.locationRelationship))&&hasValue(n.siteId)&&hasValue(location.address)&&hasValue(location.latitude)&&hasValue(location.longitude)&&hasValue(location.county)&&hasValue(n.scope)&&hasValue(n.structureWork)&&hasValue(n.antennaVolume)&&hasValue(n.equipmentVolume)&&hasValue(n.poleHeight)&&hasValue(n.facilityHeight)&&hasValue(n.poleOwner)&&hasValue(n.taCount)); }
 function render(){ $('#screen').innerHTML=renderCurrentScreen(); $('#back').disabled=step===0; $('#next').textContent=currentRoute()==='documents'&&hasWireless()&&state.currentNode<state.nodes.length-1?`Continue to Node ${state.currentNode+2} documents`:currentRoute()==='review'?(hasWireless()?`Pay ${money.format(facts().fee)} & submit`:activityCount()>1?'Submit permit applications':'Submit application'):'Continue'; $('#application-title').textContent=state.projectName||'New right-of-way application'; renderSummary(); renderGisSettings(); $('#notice').classList.add('hidden'); }
 function renderSummary(){
   const f=facts();
-  const completedNodes=f.wireless?state.nodes.filter(wirelessNodeDetailsComplete):[];
+  const completedNodes=f.wireless?state.nodes.filter(node=>graphBoolean(`/sites/#${node.id}/requiredAnswersComplete`)):[];
   const records=hasAnyActivity()?graphDocumentRecords():[];
   const projectDocumentCount=records.filter(record=>record.scope==='project').length;
   const nodeDocumentCount=records.filter(record=>record.scope==='node'&&completedNodes.includes(record.node)).length;
@@ -405,19 +399,28 @@ function renderGisSettings(){
 }
 
 const displayValue=(value,labels={}) => !hasValue(value)?'Unanswered':labels[value]??value;
-function utilityPermitExplanation(u){
-  const emergency=displayValue(u.emergency,{yes:'Yes',no:'No'});
-  const jurisdiction=displayValue(u.jurisdiction,{row:'State-maintained right-of-way',easement:'Permanent DelDOT easement',aerial:'Aerial crossing',none:'Outside DelDOT jurisdiction'});
-  if(u.emergency==='yes') return 'Emergency = Yes → After-the-Fact Emergency Utility Permit.';
-  if(u.emergency!=='no') return 'Waiting for Emergency to be answered.';
-  if(!hasValue(u.jurisdiction)) return 'Emergency = No; waiting for Jurisdiction.';
-  if(u.jurisdiction==='none') return 'Emergency = No AND Jurisdiction = outside DelDOT jurisdiction → no DelDOT permit.';
-  if(!hasValue(u.disturbance)) return `Emergency = No AND Jurisdiction = ${jurisdiction}; waiting for Ground disturbance.`;
-  if(Number(u.disturbance)>0) return `Emergency = No AND Jurisdiction = ${jurisdiction} AND Ground disturbance = ${u.disturbance} sq. ft. (> 0) → Utility Construction Permit.`;
-  if(!hasValue(u.trafficImpact)) return `Emergency = No AND Jurisdiction = ${jurisdiction} AND Ground disturbance = 0; waiting for Traffic impact.`;
-  if(u.trafficImpact!=='none') return `Emergency = No AND Ground disturbance = 0 AND Traffic impact = ${displayValue(u.trafficImpact,{lane:'lane or shoulder occupation',major:'detour, complex site, or pedestrian impact'})} → Utility Safety Permit.`;
-  if(!hasValue(u.duration)) return 'Emergency = No AND Ground disturbance = 0 AND Traffic impact = None; waiting for Duration.';
-  return `Emergency = No AND Ground disturbance = 0 AND Traffic impact = None AND Duration = ${displayValue(u.duration,{day:'up to 1 day',longer:'longer than 1 day'})} → ${u.duration==='longer'?'Utility Safety Permit':'no DelDOT permit'}.`;
+function graphExplanation(path){
+  try{
+    const inputs=[];
+    const seen=new WeakSet();
+    const walk=value=>{
+      if(!value||typeof value!=='object'||seen.has(value)) return;
+      seen.add(value);
+      for(const [key,child] of Object.entries(value)){
+        if(key.endsWith('__f_source')&&child?.toString__T) inputs.push(child.toString__T());
+        else walk(child);
+      }
+    };
+    walk(graph.explain(path));
+    const unique=[...new Set(inputs.filter(input=>input!==path))];
+    if(!unique.length){
+      const missing=Array.from(graph.explainAndSolve(path)||[], group=>Array.from(group)).flat();
+      return missing.length?`Waiting for ${[...new Set(missing)].join(' · ')}`:'Derived directly by the fact graph.';
+    }
+    return `Derived from ${unique.join(' · ')}`;
+  }catch{
+    return 'Derived by the fact graph from the currently available facts.';
+  }
 }
 
 function visualizerGraph(){
@@ -441,7 +444,7 @@ function visualizerGraph(){
       {path:'/utilityGroundDisturbanceSqFt',label:'Ground disturbance',value:hasValue(state.utility.disturbance)?`${state.utility.disturbance} sq. ft.`:'Unanswered'},
       {path:'/utilityTrafficImpact',label:'Traffic impact',value:displayValue(state.utility.trafficImpact,{none:'None',lane:'Lane or shoulder occupation',major:'Detour, complex site, or pedestrian impact'})},
       {path:'/utilityDuration',label:'Duration',value:displayValue(state.utility.duration,{day:'Up to 1 day',longer:'Longer than 1 working day'})},
-      {path:'/utilityTypicalApplicationCount',label:'Typical Applications',value:hasValue(state.utility.taCount)?state.utility.taCount:'Unanswered'}
+      {path:`/sites/#${state.utility.id}/typicalApplicationCount`,label:'Typical Applications',value:hasValue(state.utility.taCount)?state.utility.taCount:'Unanswered'}
     );
     inputs.push(
       {path:`/sites/#${state.utility.id}/gisIsStateMaintainedRoad`,label:'GIS · state-maintained road',value:displayValue(state.utility.gis.stateMaintained,{true:'Yes',false:'No'})},
@@ -450,10 +453,10 @@ function visualizerGraph(){
       {path:`/sites/#${state.utility.id}/gisIsNearRailroad`,label:'GIS · railroad proximity',value:displayValue(state.utility.gis.nearRailroad,{true:'Yes',false:'No'})}
     );
     consequences.push(
-      {path:'/derivedPermitType',label:'Permit outcome',value:f.permitType,reason:utilityPermitExplanation(state.utility)},
-      {path:'/utilityRequiresTrafficControlPlan',label:'Traffic Control Plan',value:tcpRequired===null?'Not determined':tcpRequired?'Required':'Not required',reason:`Typical Applications = ${hasValue(state.utility.taCount)?`${state.utility.taCount} ${Number(state.utility.taCount)>=5?'(≥ 5)':'(< 5)'}`:'Unanswered'}; qualifying traffic impact = ${hasValue(state.utility.trafficImpact)?(state.utility.trafficImpact==='major'?'Yes':'No'):'Unanswered'}`},
-      {path:'/requiredDocuments',label:'Required documents',value:tcpRequired===null?`At least ${f.documents.length} currently known`:`${f.documents.length} documents`,reason:`${f.documents.join(' · ')}${tcpRequired===null?' · additional requirements remain undetermined':''}`},
-      {path:'/amountDue',label:'Amount due',value:money.format(f.fee),reason:`${f.permitType} has no application fee`}
+      {path:'/utilityPermitType',label:'Permit outcome',value:f.permitType,reason:graphExplanation('/utilityPermitType')},
+      {path:'/utilityRequiresTrafficControlPlan',label:'Traffic Control Plan',value:tcpRequired===null?'Not determined':tcpRequired?'Required':'Not required',reason:graphExplanation('/utilityRequiresTrafficControlPlan')},
+      {path:'/utilityDocumentsComplete',label:'Required documents',value:tcpRequired===null?`At least ${f.documents.length} currently known`:`${f.documents.length} documents`,reason:graphExplanation('/utilityDocumentsComplete')},
+      {path:'/wirelessTotalFee',label:'Amount due',value:money.format(f.fee),reason:hasWireless()?graphExplanation('/wirelessTotalFee'):'Both utility and entrance applications have no application fee'}
     );
   }
   if(hasEntrance()){
@@ -478,15 +481,15 @@ function visualizerGraph(){
     const location=n?nodeLocation(n):null;
     inputs.push({path:'/requestedWirelessNodeCount',label:'Declared nodes',value:state.requestedNodeCount});
     if(n) inputs.push(
-      {path:`/sites/#${state.currentNode+1}/siteId`,label:`Node ${state.currentNode+1} site ID`,value:n.siteId||'Unanswered'},
+      {path:`/sites/#${n.id}/siteId`,label:`Node ${state.currentNode+1} site ID`,value:n.siteId||'Unanswered'},
       {path:`/sites/#${n.id}/usesProjectSiteLocation`,label:'Location source',value:hasSharedProjectSite()?(nodeUsesProjectSite(n)?'Project site':'Node-specific site'):'Node-specific site'},
       {path:`/sites/#${n.id}/address`,label:'Effective address',value:location.address||'Unanswered'},
       {path:`/sites/#${n.id}/latitude`,label:'Effective latitude',value:location.latitude||'Unanswered'},
       {path:`/sites/#${n.id}/longitude`,label:'Effective longitude',value:location.longitude||'Unanswered'},
-      {path:`/sites/#${state.currentNode+1}/largestAntennaVolume`,label:'Largest antenna',value:n.antennaVolume===''?'Unanswered':`${n.antennaVolume} cu. ft.`},
-      {path:`/sites/#${state.currentNode+1}/otherEquipmentVolume`,label:'Other equipment',value:n.equipmentVolume===''?'Unanswered':`${n.equipmentVolume} cu. ft.`},
-      {path:`/sites/#${state.currentNode+1}/facilityHeight`,label:'Facility height',value:n.facilityHeight===''?'Unanswered':`${n.facilityHeight} ft.`},
-      {path:`/sites/#${state.currentNode+1}/typicalApplicationCount`,label:'Typical Applications',value:hasValue(n.taCount)?n.taCount:'Unanswered'}
+      {path:`/sites/#${n.id}/largestAntennaVolume`,label:'Largest antenna',value:n.antennaVolume===''?'Unanswered':`${n.antennaVolume} cu. ft.`},
+      {path:`/sites/#${n.id}/otherEquipmentVolume`,label:'Other equipment',value:n.equipmentVolume===''?'Unanswered':`${n.equipmentVolume} cu. ft.`},
+      {path:`/sites/#${n.id}/facilityHeight`,label:'Facility height',value:n.facilityHeight===''?'Unanswered':`${n.facilityHeight} ft.`},
+      {path:`/sites/#${n.id}/typicalApplicationCount`,label:'Typical Applications',value:hasValue(n.taCount)?n.taCount:'Unanswered'}
     );
     if(n) inputs.push(
       {path:`/sites/#${n.id}/gisIsStateMaintainedRoad`,label:'GIS · state-maintained road',value:displayValue(location.gis.stateMaintained,{true:'Yes',false:'No'})},
@@ -503,7 +506,7 @@ function visualizerGraph(){
       const gisEligible=graphResult(`${prefix}/gisJurisdictionEligible`);
       const specialReview=graphBoolean(`${prefix}/gisSpecialReviewRequired`);
       const reason=!determined?'Waiting for equipment, height, and GIS jurisdiction facts.':`Equipment size = ${graphBoolean(`${prefix}/sizeEligible`)?'eligible':'not eligible'}; facility height ${node.facilityHeight} ft. against ${maximumHeight} ft. limit; GIS jurisdiction = ${gisEligible?'eligible':'not eligible'}${specialReview?'; limited-access review required':''}.`;
-      return {path:`/sites/#${index+1}/permitEligible`,label:`Node ${index+1}${node.siteId?` (${node.siteId})`:''} eligibility`,value:determined?(eligible?'Eligible':'Does not qualify'):'Not determined',reason,blocking:determined&&!eligible,determined,eligible};
+      return {path:`${prefix}/permitEligible`,label:`Node ${index+1}${node.siteId?` (${node.siteId})`:''} eligibility`,value:determined?(eligible?'Eligible':'Does not qualify'):'Not determined',reason:graphExplanation(`${prefix}/permitEligible`),blocking:determined&&!eligible,determined,eligible};
     });
     const allEligible=nodeEligibility.every(result=>result.determined&&result.eligible);
     consequences.push(...nodeEligibility);
@@ -511,8 +514,8 @@ function visualizerGraph(){
     consequences.push(
       {path:'/allWirelessNodesEligible',label:'All-node eligibility',value:allEligible?'All nodes eligible':'Not yet satisfied',reason:`${nodeEligibility.filter(result=>result.eligible).length} of ${f.nodeCount} nodes are currently eligible`,blocking:nodeEligibility.some(result=>result.determined&&!result.eligible)},
       {path:'/wirelessNodeCount',label:'Application records',value:`${f.nodeCount} nodes`,reason:'One permit application per declared node'},
-      {path:'/projectDocuments',label:'Project-wide documents',value:`${graphDocumentRecords().filter(record=>record.scope==='project').length} required once`,reason:graphDocumentRecords().filter(record=>record.scope==='project').map(record=>record.label).join(' · ')||'No project-wide document is currently required'},
-      {path:'/requiredDocuments',label:`Node ${state.currentNode+1} documents`,value:`${f.documents.length} required`,reason:graphDocumentRecords().filter(record=>record.scope==='node'&&record.node===n).map(record=>`${record.label} — ${graphResult(record.reason)}`).join(' · ')},
+      {path:'/projectDocumentsComplete',label:'Project-wide documents',value:`${graphDocumentRecords().filter(record=>record.scope==='project').length} required once`,reason:graphExplanation('/projectDocumentsComplete')},
+      {path:`/sites/#${n?.id}/documentsComplete`,label:`Node ${state.currentNode+1} documents`,value:`${f.documents.length} required`,reason:n?graphExplanation(`/sites/#${n.id}/documentsComplete`):'No node selected'},
       {path:'/wirelessTotalFee',label:'Package fee',value:money.format(f.fee),reason:`${f.nodeCount} nodes × $100`}
     );
   }

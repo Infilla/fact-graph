@@ -2,7 +2,7 @@
 
 ## Entrance + utility package
 
-One project can now request both an Entrance Permit and a Utility Permit. Contact, project, site, construction-impact, and GIS facts are stored once and consumed by both permit rule sets. Entrance- and utility-specific answers and documents remain independently derived and validated.
+One project can produce an Entrance Permit together with any applicable utility outcome: a Utility Construction Permit, Utility Safety Permit, After-the-Fact Emergency Utility Permit, or one or more Small Wireless Facility Permits. Contact, project, site, construction-impact, and GIS facts are stored once and consumed by all applicable rule sets.
 
 With `/entrancePermitRequested = true`, the graph derives both permit outcomes, entrance traffic requirements, separate document completion states, and `/crossPermitCoordinationRequired` when underground utility work affects the entrance site. `/applicationComplete` becomes true only when every requested permit is complete.
 
@@ -100,7 +100,7 @@ The fact graph is the executable source for document triggers and their displaye
 | Application complete | shared facts, application/node facts, derived documents | True when the complete application record can be assembled |
 | Ready to submit | application complete, eligibility, documents, attestations | Sole fact used to enable submission |
 
-The browser does not use HTML `required` validation. Each requirement has a fact path, relevance stage, truth value, and explanation. Navigation and submission query those facts and surface the unsatisfied fact explanations. Blank controls remain unknown rather than being written as default answers.
+The browser does not use HTML `required` validation. Every displayed requirement now names a real dictionary path, and aggregate completion and submission readiness come from the graph. The inspector reads the engine's explanation tree rather than reimplementing permit rules in JavaScript. Blank material questions remain unknown until the applicant visits and answers the applicable screen.
 
 For small wireless, the requested permit type and node eligibility are separate. Selecting small wireless establishes the requested permit as a Small Wireless Facility Permit. Missing or disqualifying equipment and height answers affect only that node’s `/permitEligible` fact and the all-node aggregate; they do not change the requested permit type.
 

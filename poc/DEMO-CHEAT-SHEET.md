@@ -237,7 +237,6 @@ On either application type, set:
 
 | Applicant or GIS fact | Value |
 |---|---|
-| Applicant says airport airspace | No |
 | GIS says inside airport airspace | Yes |
 | Applicant says railroad crossing | No |
 | GIS says near a railroad | Yes |
