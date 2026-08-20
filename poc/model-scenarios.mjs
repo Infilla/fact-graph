@@ -524,6 +524,13 @@ function capture(scenario, step, graph, paths) {
   expect(name, 'utility application questions enabled', graph, '/askGeneralUtilityQuestions', 'complete', true);
 }
 
+// The browser must commit activity facts before consulting graph-derived activity predicates.
+{
+  const name = '23 · Browser graph rebuild ordering';
+  const pass = /graphSet\('\/includesEntranceWork'[\s\S]*?graph\.save\(\);[\s\S]*?graphSet\('\/projectName'/.test(appSource);
+  checks.push({scenario:name,step:'activity layer transaction',path:'rebuildGraph()',expectedStatus:'saved before derived reads',expectedValue:true,actual:{status:pass?'saved before derived reads':'ordering regression',value:pass},pass});
+}
+
 const failures = checks.filter(check => !check.pass);
 const report = { scenarios, checks: { total: checks.length, passed: checks.length - failures.length, failed: failures.length, failures } };
 console.log(JSON.stringify(process.argv.includes('--summary') ? report.checks : report, null, 2));

@@ -98,6 +98,9 @@ function rebuildGraph(){
     graphSet('/includesSmallWirelessFacilities',sourceHasWireless(),'boolean');
     graphSet('/includesEntranceWork',sourceHasEntrance(),'boolean');
   }
+  // Commit the activity layer before using graph-derived activity facts to
+  // decide which applicant answers belong in this graph rebuild.
+  graph.save();
   graphSet('/projectName',state.projectName);
   graphSet('/contactCompany',state.contact.company);
   graphSet('/contactFirstName',state.contact.firstName);
