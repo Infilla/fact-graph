@@ -22,3 +22,4 @@ metals.sbt
 
 # macOS
 .DS_STORE
+.vercel
