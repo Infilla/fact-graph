@@ -10,52 +10,30 @@ With `/entrancePermitRequested = true`, the graph derives both permit outcomes, 
 
 ```mermaid
 flowchart LR
-  SHARED["Shared answers"] --> SC["sharedApplicationFactsComplete"]
-  AGENT["isAuthorizedAgent"] --> AR["authorizedAgentRequirementSatisfied"]
-  FORM["authorizedAgentFormAttached"] --> AR
-  AR --> PD["projectDocumentsComplete"]
-  MLUOA["mlUoaAttached"] --> PD
-  TYPE["isSmallWirelessApplication"] --> GTYPE["isGeneralUtilityApplication = NOT small wireless"]
-  GTYPE -. True .-> EM["Emergency?"]
-  EM -- Yes --> EP["Emergency permit"]
-  EM -- No --> J["DelDOT jurisdiction?"]
-  J -- No --> NONE["No permit"]
-  J -- Yes --> D["Disturbance > 0?"]
-  D -- Yes --> CP["Construction permit"]
-  D -- No --> T["Traffic impact?"]
-  T -- Yes --> SP["Safety permit"]
-  T -- No --> DUR["Duration > 1 day?"]
-  DUR -- Yes --> SP
-  DUR -- No --> NONE
-  EM --> UC["utilityRequiredAnswersComplete"]
-  J --> UC
-  D --> UC
-  TYPE -. True .-> NF["sites/* answers"]
-  NF --> NC["*/requiredAnswersComplete"]
-  NF --> NS["*/sizeEligible"]
-  NF --> NH["*/heightEligible"]
-  NS --> NE["*/permitEligible · one result per node"]
-  NH --> NE
-  NE --> AE["allWirelessNodesEligible"]
-  NF --> ND["*/requiredDocumentsComplete"]
-  NC --> ALL["allWirelessNodesComplete"]
-  NE --> ALL
-  ND --> ALL
+  ACTIVITIES["Applicant activities"] --> GENERAL["includesGeneralUtilityWork"]
+  ACTIVITIES --> WIRELESS["includesSmallWirelessFacilities"]
+  ACTIVITIES --> ENTRANCE["includesEntranceWork"]
+  SHARED["Project + contact facts"] --> SC["sharedApplicationFactsComplete"]
+  SITE["sites/* applicant facts"] --> GIS["sites/* GIS facts"]
+  GENERAL --> RAW["Raw utility answers<br/>jurisdiction · traffic impact · duration"]
+  RAW --> BOOLS["Derived utility booleans"] --> UTYPE["utilityPermitType"]
+  SITE --> TCP["anySiteRequiresTrafficControlPlan"] --> UDOCS["utilityDocumentsComplete"]
+  UTYPE --> UOK["generalUtilityRequirementsSatisfied"]
+  UDOCS --> UOK
+  WIRELESS --> NODES["Wireless sites/*"]
+  NODES --> QUAL["statutoryQualificationSatisfied"]
+  GIS --> JUR["gisJurisdictionEligible"]
+  QUAL --> NELIG["permitEligible per node"]
+  JUR --> NELIG --> WOK["smallWirelessRequirementsSatisfied"]
+  NODES --> FEE["wirelessTotalFee<br/>node count × $100"]
+  ENTRANCE --> EFACTS["Entrance facts"] --> EOK["entranceRequirementsSatisfied"]
   SC --> COMPLETE["applicationComplete"]
-  PD --> COMPLETE
-  TYPE --> UB["generalUtilityRequirementsSatisfied = small wireless OR general utility complete"]
-  UC --> UB
-  EP --> UB
-  CP --> UB
-  SP --> UB
-  GTYPE --> WB["smallWirelessRequirementsSatisfied = general utility OR all nodes complete"]
-  ALL --> WB
-  UB --> COMPLETE
-  WB --> COMPLETE
-  COMPLETE --> READY["readyToSubmit"]
-  ATTEST["attestationsAccepted"] --> READY
-  READY -- True --> SUBMIT["Submit / pay"]
-  READY -- False --> EXPLAIN["Explain unsatisfied facts"]
+  UOK --> COMPLETE
+  WOK --> COMPLETE
+  EOK --> COMPLETE
+  ATTEST["attestationsAccepted"] --> READY["readyToSubmit"]
+  COMPLETE --> READY --> PACKAGE["Submit every derived permit together"]
+  FEE --> PACKAGE
 ```
 
 The editable, detailed version is in [`fact-model.mmd`](fact-model.mmd).
