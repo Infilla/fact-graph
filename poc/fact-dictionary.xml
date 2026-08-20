@@ -40,7 +40,7 @@
     <Fact path="/mlUoaAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/authorizedAgentFormAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/authorizedAgentFormRequired"><Derived><Dependency path="/isAuthorizedAgent"/></Derived></Fact>
-    <Fact path="/authorizedAgentFormRequiredByUtility"><Derived><All><Dependency path="/authorizedAgentFormRequired"/><Dependency path="/utilityPermitRequested"/></All></Derived></Fact>
+    <Fact path="/authorizedAgentFormRequiredByUtility"><Derived><All><Dependency path="/authorizedAgentFormRequired"/><Dependency path="/generalUtilityApplicationRequired"/></All></Derived></Fact>
     <Fact path="/authorizedAgentFormRequiredByWireless"><Derived><All><Dependency path="/authorizedAgentFormRequired"/><Dependency path="/isSmallWirelessApplication"/></All></Derived></Fact>
     <Fact path="/authorizedAgentFormRequiredByEntrance"><Derived><All><Dependency path="/authorizedAgentFormRequired"/><Dependency path="/entrancePermitRequested"/></All></Derived></Fact>
     <Fact path="/mlUoaRequiredByWireless"><Derived><Dependency path="/isSmallWirelessApplication"/></Derived></Fact>
@@ -89,6 +89,26 @@
     <Fact path="/utilityHasTrafficImpact"><Derived><Not><Equal><Left><Dependency path="/utilityTrafficImpact"/></Left><Right><Enum optionsPath="/utilityTrafficImpactOptions">none</Enum></Right></Equal></Not></Derived></Fact>
     <Fact path="/utilityDuration"><Writable><Enum optionsPath="/utilityDurationOptions"/></Writable></Fact>
     <Fact path="/utilityLongerThanOneDay"><Derived><Equal><Left><Dependency path="/utilityDuration"/></Left><Right><Enum optionsPath="/utilityDurationOptions">longer</Enum></Right></Equal></Derived></Fact>
+    <Fact path="/utilityPermitDeterminationComplete"><Derived><Any>
+      <Not><Dependency path="/utilityPermitRequested"/></Not>
+      <All>
+        <IsComplete><Dependency path="/utilityIsEmergency"/></IsComplete>
+        <IsComplete><Dependency path="/utilityJurisdiction"/></IsComplete>
+        <IsComplete><Dependency path="/utilityGroundDisturbanceSqFt"/></IsComplete>
+        <IsComplete><Dependency path="/utilityTrafficImpact"/></IsComplete>
+        <IsComplete><Dependency path="/utilityDuration"/></IsComplete>
+      </All>
+    </Any></Derived></Fact>
+    <Fact path="/wirelessPermitDeterminationComplete"><Derived><Any>
+      <Not><Dependency path="/isSmallWirelessApplication"/></Not>
+      <IsComplete><Dependency path="/requestedWirelessNodeCount"/></IsComplete>
+    </Any></Derived></Fact>
+    <Fact path="/permitPackageDetermined"><Derived><All>
+      <Dependency path="/atLeastOneActivitySelected"/>
+      <Dependency path="/utilitySubtypeSelectionValid"/>
+      <Dependency path="/utilityPermitDeterminationComplete"/>
+      <Dependency path="/wirelessPermitDeterminationComplete"/>
+    </All></Derived></Fact>
     <Fact path="/utilityRequiresTrafficControlPlan">
       <Derived><Dependency path="/anySiteRequiresTrafficControlPlan"/></Derived>
     </Fact>
@@ -138,17 +158,27 @@
         </All></When><Then><String>No DelDOT permit needed</String></Then></Case>
       </Switch></Derived>
     </Fact>
+    <Fact path="/utilityConstructionPermitNeeded"><Derived><All><Dependency path="/utilityPermitRequested"/><Equal><Left><Dependency path="/utilityPermitType"/></Left><Right><String>Utility Construction Permit</String></Right></Equal></All></Derived></Fact>
+    <Fact path="/utilitySafetyPermitNeeded"><Derived><All><Dependency path="/utilityPermitRequested"/><Equal><Left><Dependency path="/utilityPermitType"/></Left><Right><String>Utility Safety Permit</String></Right></Equal></All></Derived></Fact>
+    <Fact path="/emergencyUtilityPermitNeeded"><Derived><All><Dependency path="/utilityPermitRequested"/><Equal><Left><Dependency path="/utilityPermitType"/></Left><Right><String>After-the-Fact Emergency Utility Permit</String></Right></Equal></All></Derived></Fact>
+    <Fact path="/smallWirelessPermitsNeeded"><Derived><Dependency path="/isSmallWirelessApplication"/></Derived></Fact>
+    <Fact path="/entrancePermitNeeded"><Derived><Dependency path="/entrancePermitRequested"/></Derived></Fact>
+    <Fact path="/generalUtilityApplicationRequired"><Derived><Any>
+      <Dependency path="/utilityConstructionPermitNeeded"/>
+      <Dependency path="/utilitySafetyPermitNeeded"/>
+      <Dependency path="/emergencyUtilityPermitNeeded"/>
+    </Any></Derived></Fact>
     <Fact path="/wirelessPermitType"><Derived><String>Small Wireless Facility Permit</String></Derived></Fact>
     <Fact path="/utilityDrawingRequired"><Derived><True/></Derived></Fact>
     <Fact path="/utilityOccupancyAgreementRequired"><Derived><Not><Dependency path="/utilityIsPublic"/></Not></Derived></Fact>
-    <Fact path="/utilityDrawingRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/utilityDrawingRequired"/></All></Derived></Fact>
-    <Fact path="/utilityOccupancyAgreementRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/utilityOccupancyAgreementRequired"/></All></Derived></Fact>
-    <Fact path="/utilityTrafficControlPlanRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/utilityRequiresTrafficControlPlan"/></All></Derived></Fact>
-    <Fact path="/utilityFoundationDesignRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/anySiteFoundationDesignRequired"/></All></Derived></Fact>
-    <Fact path="/utilityCasingSpecificationsRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/anySiteCasingSpecificationsRequired"/></All></Derived></Fact>
-    <Fact path="/utilityAirportFormRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/anySiteAirportFormRequired"/></All></Derived></Fact>
-    <Fact path="/utilityRailroadApprovalRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/anySiteRailroadApprovalRequired"/></All></Derived></Fact>
-    <Fact path="/utilityRailroadProximityReviewRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/anySiteRailroadProximityReviewRequired"/></All></Derived></Fact>
+    <Fact path="/utilityDrawingRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/utilityDrawingRequired"/></All></Derived></Fact>
+    <Fact path="/utilityOccupancyAgreementRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/utilityOccupancyAgreementRequired"/></All></Derived></Fact>
+    <Fact path="/utilityTrafficControlPlanRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/utilityRequiresTrafficControlPlan"/></All></Derived></Fact>
+    <Fact path="/utilityFoundationDesignRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/anySiteFoundationDesignRequired"/></All></Derived></Fact>
+    <Fact path="/utilityCasingSpecificationsRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/anySiteCasingSpecificationsRequired"/></All></Derived></Fact>
+    <Fact path="/utilityAirportFormRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/anySiteAirportFormRequired"/></All></Derived></Fact>
+    <Fact path="/utilityRailroadApprovalRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/anySiteRailroadApprovalRequired"/></All></Derived></Fact>
+    <Fact path="/utilityRailroadProximityReviewRequiredByUtility"><Derived><All><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/anySiteRailroadProximityReviewRequired"/></All></Derived></Fact>
     <Fact path="/utilityDrawingReason"><Derived><String>The reported work requires a construction, safety, or after-the-fact emergency permit.</String></Derived></Fact>
     <Fact path="/utilityOccupancyAgreementReason"><Derived><String>The utility work is not being performed by a public utility.</String></Derived></Fact>
     <Fact path="/utilityTrafficControlPlanReason"><Derived><String>The proposed work has traffic-control conditions that require a Traffic Control Plan.</String></Derived></Fact>
@@ -198,8 +228,7 @@
     <Fact path="/crossPermitCoordinationRequired"><Derived><All><Dependency path="/entrancePermitRequested"/><Dependency path="/anySiteHasUndergroundWork"/></All></Derived></Fact>
     <Fact path="/entrancePermitEligible"><Derived><All><Dependency path="/entrancePermitRequested"/><Dependency path="/allSitesGisJurisdictionEligible"/></All></Derived></Fact>
     <Fact path="/entrancePermitType"><Derived><Switch>
-      <Case><When><Dependency path="/entrancePermitEligible"/></When><Then><String>Entrance Permit</String></Then></Case>
-      <Case><When><All><Dependency path="/entrancePermitRequested"/><IsComplete><Dependency path="/allSitesGisJurisdictionEligible"/></IsComplete><Not><Dependency path="/allSitesGisJurisdictionEligible"/></Not></All></When><Then><String>No DelDOT Entrance Permit needed</String></Then></Case>
+      <Case><When><Dependency path="/entrancePermitRequested"/></When><Then><String>Entrance Permit</String></Then></Case>
     </Switch></Derived></Fact>
     <Fact path="/entranceRequiredAnswersComplete"><Derived><Any>
       <Not><Dependency path="/entrancePermitRequested"/></Not>
@@ -446,7 +475,7 @@
     </Equal></Derived></Fact>
     <Fact path="/generalUtilityRequirementsSatisfied">
       <Derived><Any>
-        <Not><Dependency path="/utilityPermitRequested"/></Not>
+        <Not><Dependency path="/generalUtilityApplicationRequired"/></Not>
         <All>
           <Dependency path="/utilityRequiredAnswersComplete"/>
           <Dependency path="/utilityPermitEligible"/>
@@ -472,6 +501,29 @@
     <Fact path="/attestationsAccepted"><Writable><Boolean/></Writable></Fact>
     <Fact path="/readyToSubmit"><Derived><All><Dependency path="/applicationComplete"/><Dependency path="/attestationsAccepted"/></All></Derived></Fact>
     <Fact path="/wirelessNodeCount"><Derived><CollectionSize><Filter path="/sites"><Dependency path="isWirelessNode"/></Filter></CollectionSize></Derived></Fact>
+    <Fact path="/generalUtilityPermitCount"><Derived><Switch>
+      <Case><When><Dependency path="/generalUtilityApplicationRequired"/></When><Then><Int>1</Int></Then></Case>
+      <Case><When><Not><Dependency path="/generalUtilityApplicationRequired"/></Not></When><Then><Int>0</Int></Then></Case>
+    </Switch></Derived></Fact>
+    <Fact path="/wirelessPermitCount"><Derived><Switch>
+      <Case><When><Dependency path="/smallWirelessPermitsNeeded"/></When><Then><Dependency path="/requestedWirelessNodeCount"/></Then></Case>
+      <Case><When><Not><Dependency path="/smallWirelessPermitsNeeded"/></Not></When><Then><Int>0</Int></Then></Case>
+    </Switch></Derived></Fact>
+    <Fact path="/entrancePermitCount"><Derived><Switch>
+      <Case><When><Dependency path="/entrancePermitNeeded"/></When><Then><Int>1</Int></Then></Case>
+      <Case><When><Not><Dependency path="/entrancePermitNeeded"/></Not></When><Then><Int>0</Int></Then></Case>
+    </Switch></Derived></Fact>
+    <Fact path="/requiredPermitCount"><Derived><Add><Dependency path="/generalUtilityPermitCount"/><Dependency path="/wirelessPermitCount"/><Dependency path="/entrancePermitCount"/></Add></Derived></Fact>
+    <Fact path="/noCoveredPermitNeeded"><Derived><Equal><Left><Dependency path="/requiredPermitCount"/></Left><Right><Int>0</Int></Right></Equal></Derived></Fact>
+    <!-- These facts are the form manifest. The browser renders screens whose
+         graph-derived question groups are required; it does not choose a branch. -->
+    <Fact path="/askUtilityKindQuestions"><Derived><Dependency path="/includesUtilityActivity"/></Derived></Fact>
+    <Fact path="/askSharedApplicationQuestions"><Derived><GreaterThan><Left><Dependency path="/requiredPermitCount"/></Left><Right><Int>0</Int></Right></GreaterThan></Derived></Fact>
+    <Fact path="/askProjectSiteQuestions"><Derived><Any><Dependency path="/generalUtilityApplicationRequired"/><Dependency path="/entrancePermitRequested"/></Any></Derived></Fact>
+    <Fact path="/askGeneralUtilityQuestions"><Derived><Dependency path="/generalUtilityApplicationRequired"/></Derived></Fact>
+    <Fact path="/askWirelessNodeQuestions"><Derived><Dependency path="/isSmallWirelessApplication"/></Derived></Fact>
+    <Fact path="/askEntranceQuestions"><Derived><Dependency path="/entrancePermitRequested"/></Derived></Fact>
+    <Fact path="/askDocumentQuestions"><Derived><Dependency path="/askSharedApplicationQuestions"/></Derived></Fact>
     <Fact path="/wirelessNodeCountMatchesRequest"><Derived><Equal><Left><Dependency path="/wirelessNodeCount"/></Left><Right><Dependency path="/requestedWirelessNodeCount"/></Right></Equal></Derived></Fact>
     <Fact path="/wirelessFeePerNode"><Derived><Dollar>100.00</Dollar></Derived></Fact>
     <Fact path="/wirelessTotalFee">

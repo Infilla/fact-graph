@@ -7,9 +7,15 @@ flowchart LR
 
   subgraph PROJECT["Shared project"]
     ACTIVITIES["Activity facts"]:::source
+    DETERMINANTS["Permit-determining answers<br/>emergency · jurisdiction · disturbance<br/>traffic · duration · wireless count"]:::source
+    PACKAGE_DONE["/permitPackageDetermined"]:::complete
+    NEEDED["Five explicit outcomes<br/>/utilityConstructionPermitNeeded<br/>/utilitySafetyPermitNeeded<br/>/emergencyUtilityPermitNeeded<br/>/smallWirelessPermitsNeeded<br/>/entrancePermitNeeded"]:::derived
+    PERMIT_COUNT["/requiredPermitCount<br/>includes /wirelessPermitCount"]:::derived
+    QUESTION_MANIFEST["Graph form manifest<br/>/askSharedApplicationQuestions<br/>/askProjectSiteQuestions<br/>/askGeneralUtilityQuestions<br/>/askWirelessNodeQuestions<br/>/askEntranceQuestions<br/>/askDocumentQuestions"]:::derived
     CONTACT["/projectName + /contact*"]:::source
     SHARED["/sharedApplicationFactsComplete"]:::complete
     ACTIVITIES --> SHARED
+    ACTIVITIES --> DETERMINANTS --> PACKAGE_DONE --> NEEDED --> PERMIT_COUNT --> QUESTION_MANIFEST
     CONTACT --> SHARED
   end
 
@@ -75,9 +81,11 @@ flowchart LR
     E_DOCS --> E_DONE
   end
 
-  ACTIVITIES --> U_RAW
-  ACTIVITIES --> NODE
-  ACTIVITIES --> E_SOURCE
+  DETERMINANTS --> U_RAW
+  QUESTION_MANIFEST --> CONTACT
+  QUESTION_MANIFEST --> SITE_SOURCE
+  QUESTION_MANIFEST --> NODE
+  QUESTION_MANIFEST --> E_SOURCE
   SHARED --> COMPLETE["/applicationComplete"]:::complete
   PROJECT_DOCS["/projectDocumentsComplete"]:::complete --> COMPLETE
   U_DONE --> COMPLETE

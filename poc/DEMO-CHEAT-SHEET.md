@@ -5,15 +5,16 @@ Use these scenarios to demonstrate how applicant answers, per-site facts, and si
 ## Before each scenario
 
 1. Select **Reset application** unless the scenario explicitly continues from the previous one.
-2. Enter any valid project and contact information.
-3. Open **Fact Graph** to inspect source and derived facts.
-4. For location-dependent scenarios, set the values under **Simulated GIS source** for the current site.
+2. Select the project activities and answer the **Permit determination** questions first.
+3. Review the derived permit package, then enter any valid project and contact information requested for it.
+4. Open **Fact Graph** to inspect source and derived facts.
+5. For location-dependent scenarios, set the values under **Demo GIS settings** for the current site.
 
 Refreshing the browser does not clear a draft. The application restores answers from local storage, so use **Reset application** when you need a clean scenario.
 
 ## 1. Show an undetermined permit
 
-Choose **General utility work**, complete the contact and project screens, and stop before answering the eligibility questions.
+Choose **Build or maintain a utility**, then **Water, sewer, gas, power, telephone, cable, or fiber**. Stop on **Permit determination** before answering its questions.
 
 Expected behavior:
 
@@ -26,17 +27,17 @@ Talking point: the graph does not assume that unanswered Boolean questions mean 
 
 ## 2. Utility Construction Permit
 
-Use these eligibility answers:
+Use these permit-determination answers first:
 
 | Question | Answer |
 |---|---|
-| Public utility? | Yes |
-| Utility type | Power / electrical |
 | Where will work occur? | State-maintained right-of-way |
 | Emergency work? | No |
 | Ground disturbance | 480 sq. ft. |
 | Traffic impact | None |
 | Total duration | Up to 1 day |
+
+The next screen should identify **Utility Construction Permit**. In the application-detail phase, answer **Public utility? = Yes** and **Utility type = Power / electrical**.
 
 Set the simulated GIS facts:
 

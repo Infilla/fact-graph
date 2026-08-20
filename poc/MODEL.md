@@ -10,30 +10,14 @@ With `/entrancePermitRequested = true`, the graph derives both permit outcomes, 
 
 ```mermaid
 flowchart LR
-  ACTIVITIES["Applicant activities"] --> GENERAL["includesGeneralUtilityWork"]
-  ACTIVITIES --> WIRELESS["includesSmallWirelessFacilities"]
-  ACTIVITIES --> ENTRANCE["includesEntranceWork"]
-  SHARED["Project + contact facts"] --> SC["sharedApplicationFactsComplete"]
-  SITE["sites/* applicant facts"] --> GIS["sites/* GIS facts"]
-  GENERAL --> RAW["Raw utility answers<br/>jurisdiction · traffic impact · duration"]
-  RAW --> BOOLS["Derived utility booleans"] --> UTYPE["utilityPermitType"]
-  SITE --> TCP["anySiteRequiresTrafficControlPlan"] --> UDOCS["utilityDocumentsComplete"]
-  UTYPE --> UOK["generalUtilityRequirementsSatisfied"]
-  UDOCS --> UOK
-  WIRELESS --> NODES["Wireless sites/*"]
-  NODES --> QUAL["statutoryQualificationSatisfied"]
-  GIS --> JUR["gisJurisdictionEligible"]
-  QUAL --> NELIG["permitEligible per node"]
-  JUR --> NELIG --> WOK["smallWirelessRequirementsSatisfied"]
-  NODES --> FEE["wirelessTotalFee<br/>node count × $100"]
-  ENTRANCE --> EFACTS["Entrance facts"] --> EOK["entranceRequirementsSatisfied"]
-  SC --> COMPLETE["applicationComplete"]
-  UOK --> COMPLETE
-  WOK --> COMPLETE
-  EOK --> COMPLETE
-  ATTEST["attestationsAccepted"] --> READY["readyToSubmit"]
-  COMPLETE --> READY --> PACKAGE["Submit every derived permit together"]
-  FEE --> PACKAGE
+  ACT["Activities + utility subtype"] --> DET["Front-loaded determining facts<br/>emergency · jurisdiction · disturbance<br/>traffic · duration · wireless count"]
+  DET --> DONE["permitPackageDetermined"]
+  DONE --> TYPES["Explicit needed facts<br/>utilityConstructionPermitNeeded<br/>utilitySafetyPermitNeeded<br/>emergencyUtilityPermitNeeded<br/>smallWirelessPermitsNeeded + count<br/>entrancePermitNeeded"]
+  TYPES --> MANIFEST["Graph-derived question manifest<br/>askShared · askSite · askUtility<br/>askWireless · askEntrance · askDocuments"]
+  MANIFEST --> DETAILS["Applicant, site, permit, and node facts"]
+  DETAILS --> DOCS["Derived document requirements"]
+  DOCS --> COMPLETE["applicationComplete"]
+  COMPLETE --> READY["readyToSubmit"]
 ```
 
 The editable, detailed version is in [`fact-model.mmd`](fact-model.mmd).
@@ -87,15 +71,18 @@ The source specification contains a historical-pole height exemption and nearby-
 ## Applicant flow
 
 ```text
-Choose application type
-  → shared contact
-  → project name + number of wireless nodes
-  → utility: eligibility → work details → documents
-  → wireless: create node collection up front
-              → complete overview → construction → documents for each node
+Choose project activities and utility subtype
+  → answer every permit-determining question
+  → graph identifies the complete permit package and wireless permit count
+  → graph exposes the question groups required to complete that package
+  → shared contact + project facts
+  → shared site facts when required
+  → utility application details when a Construction, Safety, or Emergency permit is required
+  → wireless: complete overview → construction for each declared node
+  → one entrance detail set when an Entrance Permit is required
+  → graph-derived documents
   → review entire package
-  → utility: submit for $0
-  → wireless: one checkout for $100 × nodes
+  → one checkout for $100 × wireless nodes (other permits have no application fee)
   → transmit application record(s) to EUS
 ```
 

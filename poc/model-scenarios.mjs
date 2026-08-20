@@ -164,6 +164,7 @@ function capture(scenario, step, graph, paths) {
   apply(graph, { '/utilityIsEmergency': true });
   capture(name, 'emergency selected before GIS response', graph, ['/utilityIsEmergency', '/utilityPermitType', '/allSitesGisJurisdictionEligible', '/utilityPermitEligible']);
   expect(name, 'emergency selected before GIS response', graph, '/utilityPermitType', 'complete', 'After-the-Fact Emergency Utility Permit');
+  expect(name, 'emergency selected before GIS response', graph, '/emergencyUtilityPermitNeeded', 'complete', true);
   expect(name, 'emergency selected before GIS response', graph, '/utilityPermitEligible', 'complete', true);
 }
 
@@ -193,6 +194,7 @@ function capture(scenario, step, graph, paths) {
     [sitePath(id, 'gisIsStateMaintainedRoad')]: true, [sitePath(id, 'gisIsLimitedAccessRoad')]: false });
   capture(name, 'work and GIS facts', graph, ['/utilityPermitType', '/utilityPermitEligible', '/utilityRequiresTrafficControlPlan']);
   expect(name, 'work and GIS facts', graph, '/utilityPermitType', 'complete', 'Utility Safety Permit');
+  expect(name, 'work and GIS facts', graph, '/utilitySafetyPermitNeeded', 'complete', true);
   expect(name, 'work and GIS facts', graph, '/utilityPermitEligible', 'complete', true);
   expect(name, 'work and GIS facts', graph, '/utilityRequiresTrafficControlPlan', 'complete', false);
   apply(graph, { [sitePath(id, 'requiresDetour')]: true });
@@ -348,7 +350,7 @@ function capture(scenario, step, graph, paths) {
   expect(name, 'all activity sets evaluated', graph, '/applicationComplete', 'complete', true);
 }
 
-// 13. Selecting activities alone must not manufacture negative answers or a utility outcome.
+// 13. Activity selection identifies an Entrance Permit but must not manufacture a utility outcome.
 {
   const name = '13 · Activity selection does not determine permit outcome';
   const { graph, ids: [projectSite] } = makeGraph(1);
@@ -359,8 +361,36 @@ function capture(scenario, step, graph, paths) {
   expect(name, 'only activities selected', graph, '/utilityIsInDelDOTJurisdiction', 'incomplete');
   expect(name, 'only activities selected', graph, '/utilityGroundDisturbanceSqFt', 'incomplete');
   expect(name, 'only activities selected', graph, '/utilityPermitType', 'incomplete');
-  expect(name, 'only activities selected', graph, '/entrancePermitType', 'incomplete');
+  expect(name, 'only activities selected', graph, '/entrancePermitType', 'complete', 'Entrance Permit');
   expect(name, 'only activities selected', graph, '/applicationComplete', 'complete', false);
+}
+
+// 20. The graph determines the whole permit package before application-detail questions.
+{
+  const name='20 · Front-loaded permit package determination';
+  const {graph}=makeGraph();
+  apply(graph,{'/includesUtilityActivity':true,'/includesGeneralUtilityWork':true,'/includesSmallWirelessFacilities':true,'/includesEntranceWork':true});
+  expect(name,'activities only',graph,'/permitPackageDetermined','complete',false);
+  apply(graph,{'/requestedWirelessNodeCount':3,'/utilityIsEmergency':false,'/utilityJurisdiction':'row','/utilityGroundDisturbanceSqFt':25,'/utilityTrafficImpact':'none','/utilityDuration':'day'});
+  expect(name,'determining answers complete',graph,'/permitPackageDetermined','complete',true);
+  expect(name,'utility outcome',graph,'/utilityPermitType','complete','Utility Construction Permit');
+  expect(name,'construction permit needed',graph,'/utilityConstructionPermitNeeded','complete',true);
+  expect(name,'safety permit not needed',graph,'/utilitySafetyPermitNeeded','complete',false);
+  expect(name,'emergency permit not needed',graph,'/emergencyUtilityPermitNeeded','complete',false);
+  expect(name,'small wireless permits needed',graph,'/smallWirelessPermitsNeeded','complete',true);
+  expect(name,'wireless count',graph,'/wirelessPermitCount','complete',3);
+  expect(name,'entrance outcome',graph,'/entrancePermitType','complete','Entrance Permit');
+  expect(name,'entrance permit needed',graph,'/entrancePermitNeeded','complete',true);
+  expect(name,'complete package count',graph,'/requiredPermitCount','complete',5);
+  expect(name,'shared application manifest',graph,'/askSharedApplicationQuestions','complete',true);
+  expect(name,'project site manifest',graph,'/askProjectSiteQuestions','complete',true);
+  expect(name,'utility detail manifest',graph,'/askGeneralUtilityQuestions','complete',true);
+  expect(name,'wireless node manifest',graph,'/askWirelessNodeQuestions','complete',true);
+  expect(name,'entrance detail manifest',graph,'/askEntranceQuestions','complete',true);
+  expect(name,'document manifest',graph,'/askDocumentQuestions','complete',true);
+  expect(name,'contact remains unanswered',graph,'/contactCompany','incomplete');
+  expect(name,'utility detail remains unanswered',graph,'/utilityType','incomplete');
+  expect(name,'entrance detail remains unanswered',graph,'/entranceType','incomplete');
 }
 
 // 14. One project-scoped agent form can satisfy multiple permit consumers.

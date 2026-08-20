@@ -46,7 +46,8 @@ const hasEntrance = () => Boolean(state.activities.entrance);
 const hasUtilityActivity = () => Boolean(state.activities.utility);
 const hasAnyActivity = () => hasUtilityActivity()||hasEntrance();
 const activityCount = () => [hasGeneralUtility(),hasWireless(),hasEntrance()].filter(Boolean).length;
-const hasSharedProjectSite = () => hasGeneralUtility()||hasEntrance();
+const needsGeneralUtilityApplication = () => hasGeneralUtility()&&graphBoolean('/generalUtilityApplicationRequired');
+const hasSharedProjectSite = () => needsGeneralUtilityApplication()||hasEntrance();
 const nodeUsesProjectSite = node => Boolean(node&&hasSharedProjectSite()&&node.locationRelationship==='shared');
 const nodeLocation = node => nodeUsesProjectSite(node)?state.utility:node;
 function syncLegacyApplicationType(){ state.applicationType=[hasGeneralUtility()?'utility':'',hasWireless()?'wireless':'',hasEntrance()?'entrance':''].filter(Boolean).join('+'); }
@@ -128,13 +129,13 @@ function rebuildGraph(){
     graphSet('/entranceStakesDate',e.stakesDate);
     graphSet('/entranceTaxParcelId',e.taxParcelId);
   }
-  const sites=[...(hasGeneralUtility()||hasEntrance()?[state.utility]:[]),...(hasWireless()?state.nodes:[])];
+  const sites=[...(needsGeneralUtilityApplication()||hasEntrance()?[state.utility]:[]),...(hasWireless()?state.nodes:[])];
   graph.set__T__O__V('/sites',FactGraph.CollectionFactory(sites.map(site=>site.id)));
   graph.save();
   sites.forEach((site,index)=>{
     const p=`/sites/#${site.id}`;
     const isNode=state.nodes.includes(site);
-    const sharesProjectLocation=isNode&&site.locationRelationship==='shared'&&(hasGeneralUtility()||hasEntrance());
+    const sharesProjectLocation=isNode&&site.locationRelationship==='shared'&&hasSharedProjectSite();
     const effectiveLocation=sharesProjectLocation?state.utility:site;
     const values=isNode?{
       siteId:site.siteId,usesProjectSiteLocation:[hasSharedProjectSite()?(hasValue(site.locationRelationship)?sharesProjectLocation:''):false,'boolean'],address:effectiveLocation.address,latitude:effectiveLocation.latitude,longitude:effectiveLocation.longitude,county:effectiveLocation.county,scope:site.scope,structureWork:site.structureWork,poleOwner:site.poleOwner,
@@ -226,7 +227,7 @@ function validationFacts(){
     requirement('/projectName','Enter a project name',hasValue(graphResult('/projectName')),routeStep('project'))
   ];
   if(hasWireless()){
-    requirements.push(requirement('/requestedWirelessNodeCount','Enter a node count from 1 to 50',hasValue(graphResult('/requestedWirelessNodeCount')),routeStep('project'),'Validated by graph limits; each node requires a separate permit and $100 fee'));
+    requirements.push(requirement('/requestedWirelessNodeCount','Enter a node count from 1 to 50',hasValue(graphResult('/requestedWirelessNodeCount')),routeStep('determination'),'Validated by graph limits; each node requires a separate permit and $100 fee'));
     state.nodes.forEach((n,index)=>{
       const location=nodeLocation(n);
       const prefix=`/sites/#${n.id}`;
@@ -250,7 +251,7 @@ function validationFacts(){
       );
     });
   }
-  if(hasGeneralUtility()||hasEntrance()) requirements.push(
+  if(needsGeneralUtilityApplication()||hasEntrance()) requirements.push(
     requirement(`/sites/#${u.id}/address`,'Enter the work address or nearest cross-streets',hasValue(graphResult(`/sites/#${u.id}/address`)),routeStep('site')),
     requirement(`/sites/#${u.id}/latitude`,'Enter the work latitude',hasValue(graphResult(`/sites/#${u.id}/latitude`)),routeStep('site')),
     requirement(`/sites/#${u.id}/longitude`,'Enter the work longitude',hasValue(graphResult(`/sites/#${u.id}/longitude`)),routeStep('site')),
@@ -258,14 +259,17 @@ function validationFacts(){
   );
   if(hasGeneralUtility()){
     requirements.push(
+      requirement('/utilityIsEmergency','Choose whether this is emergency work',hasValue(graphResult('/utilityIsEmergency')),routeStep('determination')),
+      requirement('/utilityJurisdiction','Choose where the work will occur',hasValue(graphResult('/utilityJurisdiction')),routeStep('determination')),
+      requirement('/utilityGroundDisturbanceSqFt','Enter ground disturbance, including 0',hasValue(graphResult('/utilityGroundDisturbanceSqFt')),routeStep('determination')),
+      requirement('/utilityTrafficImpact','Choose the traffic impact',hasValue(graphResult('/utilityTrafficImpact')),routeStep('determination')),
+      requirement('/utilityDuration','Choose the work duration',hasValue(graphResult('/utilityDuration')),routeStep('determination'))
+    );
+  }
+  if(needsGeneralUtilityApplication()){
+    requirements.push(
       requirement('/utilityIsPublic','Choose whether this is a public utility',hasValue(graphResult('/utilityIsPublic')),routeStep('utility')),
       requirement('/utilityType','Choose the utility type',hasValue(graphResult('/utilityType')),routeStep('utility')),
-      requirement('/utilityIsEmergency','Choose whether this is emergency work',hasValue(graphResult('/utilityIsEmergency')),routeStep('utility')),
-      requirement('/utilityJurisdiction','Choose where the work will occur',hasValue(graphResult('/utilityJurisdiction')),routeStep('utility')),
-      requirement('/utilityGroundDisturbanceSqFt','Enter ground disturbance, including 0',hasValue(graphResult('/utilityGroundDisturbanceSqFt')),routeStep('utility')),
-      requirement('/utilityTrafficImpact','Choose the traffic impact',hasValue(graphResult('/utilityTrafficImpact')),routeStep('utility')),
-      requirement('/utilityDuration','Choose the work duration',hasValue(graphResult('/utilityDuration')),routeStep('utility')),
-      requirement('/utilityPermitEligible','Answers must produce a DelDOT permit',graphBoolean('/utilityPermitEligible'),routeStep('utility'),'Derived from the current application and GIS facts'),
       requirement('/utilityWorkType','Choose the scope of work',hasValue(graphResult('/utilityWorkType')),routeStep('utility')),
       requirement('/utilityWorkDescription','Describe the proposed work',hasValue(graphResult('/utilityWorkDescription')),routeStep('utility')),
       requirement(`/sites/#${u.id}/undergroundOwnerRequirementSatisfied`,'Enter the underground facility owner’s member ID',graphBoolean(`/sites/#${u.id}/undergroundOwnerRequirementSatisfied`),routeStep('utility'),'Derived when underground facilities are proposed'),
@@ -309,16 +313,36 @@ const checkbox = (name,label,checked=false) => name==='airport'?'':`<label class
 const select = (label,name,options,current) => `<div class="field"><label for="${name}">${label}</label><select id="${name}" name="${name}"><option value="">Select one</option>${options.map(([v,l])=>`<option value="${v}" ${current===v?'selected':''}>${l}</option>`).join('')}</select></div>`;
 const intro = (eyebrow,title,lede) => `<p class="eyebrow">${eyebrow}</p><h2>${title}</h2><p class="lede">${lede}</p>`;
 
-function routeIds(){ return ['activities',...(hasUtilityActivity()?['utilityKind']:[]),'contact','project',...(hasGeneralUtility()||hasEntrance()?['site']:[]),...(hasEntrance()?['entrance']:[]),...(hasGeneralUtility()?['utility']:[]),...(hasWireless()?['wirelessOverview','wirelessConstruction']:[]),'documents','review']; }
+function routeIds(){
+  const determinationComplete=graphBoolean('/permitPackageDetermined');
+  return ['activities',...(graphBoolean('/askUtilityKindQuestions')?['utilityKind']:[]),'determination',...(determinationComplete?['package']:[]),...(determinationComplete&&graphBoolean('/askSharedApplicationQuestions')?['contact','project']:[]),...(determinationComplete&&graphBoolean('/askProjectSiteQuestions')?['site']:[]),...(determinationComplete&&graphBoolean('/askGeneralUtilityQuestions')?['utility']:[]),...(determinationComplete&&graphBoolean('/askWirelessNodeQuestions')?['wirelessOverview','wirelessConstruction']:[]),...(determinationComplete&&graphBoolean('/askEntranceQuestions')?['entrance']:[]),...(determinationComplete&&graphBoolean('/askDocumentQuestions')?['documents','review']:[])];
+}
 const currentRoute = () => routeIds()[step];
 const routeStep = id => routeIds().indexOf(id);
 const documentStep = () => routeStep('documents');
 const reviewStep = () => routeStep('review');
 function startScreen(){ return intro('Project activities','What work are you planning?','Select all broad activities included in the project. We will ask follow-up questions to determine the permit or permits needed.') + `<div class="choice-grid">${activityChoice('utilityActivity','Build or maintain a utility','Install, construct, maintain, repair, or modify utility infrastructure.',hasUtilityActivity())}${activityChoice('entrance','Create or modify an entrance','Construct, modify, or relocate a commercial, subdivision, industrial, or solar-farm entrance.',hasEntrance())}</div><p class="hint">Select both when the same project includes utility and entrance work.</p>`; }
 function utilityKindScreen(){ return intro('Utility activity','What types of utility work are included?','Select every type included in the project. A project can include both.') + `<div class="choice-grid">${activityChoice('smallWireless','Small wireless facilities','One or more antenna nodes and associated equipment.',hasWireless())}${activityChoice('otherUtility','Water, sewer, gas, power, telephone, cable, or fiber','Install, construct, maintain, repair, or modify any of these utilities.',hasGeneralUtility())}</div><p class="hint">These answers describe the work. The graph will determine the specific permits required.</p>`; }
+function determinationScreen(){
+  const u=state.utility;
+  const utilityQuestions=hasGeneralUtility()?`<fieldset><legend>Water, sewer, gas, power, telephone, cable, or fiber work</legend><div class="field-grid">${select('Was this work performed as an emergency?','emergency',[['no','No'],['yes','Yes']],u.emergency)}${select('Where will this work occur?','jurisdiction',enumChoices('/utilityJurisdictionOptions').map(([v,l])=>[v,v==='none'?'None of these':l]),u.jurisdiction)}${field('Ground disturbance (sq. ft.)','disturbance',u.disturbance,'number','min="0"')}${select('Traffic impact','trafficImpact',enumChoices('/utilityTrafficImpactOptions'),u.trafficImpact)}${select('Total duration','duration',enumChoices('/utilityDurationOptions'),u.duration)}</div></fieldset>`:'';
+  const wirelessQuestions=hasWireless()?`<fieldset><legend>Small wireless facilities</legend>${field('How many small wireless nodes are included?','requestedNodeCount',state.requestedNodeCount,'number','min="1" max="50"')}<p class="hint">Each qualifying node produces a separate Small Wireless Facility Permit and a $100 fee.</p></fieldset>`:'';
+  return intro('Permit determination','Tell us enough to identify every permit','These answers determine the permit package. We will collect the information required to complete those applications next.')+utilityQuestions+wirelessQuestions+(hasEntrance()?'<div class="notice"><strong>Entrance work selected</strong><br>An Entrance Permit will be included in the package.</div>':'');
+}
+function permitPackageScreen(){
+  const permits=[];
+  if(graphBoolean('/utilityConstructionPermitNeeded')) permits.push('Utility Construction Permit');
+  if(graphBoolean('/utilitySafetyPermitNeeded')) permits.push('Utility Safety Permit');
+  if(graphBoolean('/emergencyUtilityPermitNeeded')) permits.push('After-the-Fact Emergency Utility Permit');
+  if(graphBoolean('/smallWirelessPermitsNeeded')) permits.push(`${graphResult('/wirelessPermitCount')} × Small Wireless Facility Permit`);
+  if(graphBoolean('/entrancePermitNeeded')) permits.push('Entrance Permit');
+  const excluded=hasGeneralUtility()&&graphBoolean('/noCoveredPermitNeeded')?'<p class="hint">Based on the answers supplied, the other utility work does not require a DelDOT permit.</p>':'';
+  const count=graphResult('/requiredPermitCount')??0;
+  return intro('Permit package','Your required permits are determined','The graph will now ask for the facts and documents needed to complete this package.')+`<div class="result"><strong>${count?`${count} permit${count===1?'':'s'} identified`:'No DelDOT permits identified'}</strong><ul>${permits.map(permit=>`<li>${escapeHtml(permit)}</li>`).join('')}</ul>${excluded}</div>`;
+}
 function contactScreen(){ return intro('Contact','Who is responsible for this project?','This information is shared across every application record produced for the project.') + `<div class="field-grid">${field('Company name','company',state.contact.company)}${field('Project contact email','email',state.contact.email,'email')}${field('First name','firstName',state.contact.firstName)}${field('Last name','lastName',state.contact.lastName)}${field('Phone','phone',state.contact.phone,'tel')}<div class="field">${select('Who is filing?','filer',enumChoices('/contactFilerTypeOptions'),state.contact.filer)}</div></div>`; }
-function projectScreen(){ return intro('Project','Tell us about your project','Give the overall project a name. Permit records derived later will remain linked to this project.') + `<div class="field-grid">${field('Project name','projectName',state.projectName)}${hasWireless()?field('How many small wireless nodes are included?','requestedNodeCount',state.requestedNodeCount,'number','min="1" max="50"'):''}</div>` + (hasWireless()&&state.requestedNodeCount?`<div class="notice"><strong>${state.requestedNodeCount} wireless node${Number(state.requestedNodeCount)===1?'':'s'} · ${money.format(Number(state.requestedNodeCount)*100)}</strong><br>Each node is evaluated independently.</div>`:''); }
-function renderCurrentScreen(){ return ({activities:startScreen,utilityKind:utilityKindScreen,contact:contactScreen,project:projectScreen,site:siteLocationScreen,utility:otherUtilityDetailsScreen,wirelessOverview:wirelessOverviewScreen,wirelessConstruction,entrance:entranceDetails,documents:documentsScreen,review:reviewScreenApplicant})[currentRoute()](); }
+function projectScreen(){ return intro('Project','Tell us about your project','Give the overall project a name. Every permit record in the package will remain linked to this project.') + `<div class="field-grid">${field('Project name','projectName',state.projectName)}</div>`; }
+function renderCurrentScreen(){ return ({activities:startScreen,utilityKind:utilityKindScreen,determination:determinationScreen,package:permitPackageScreen,contact:contactScreen,project:projectScreen,site:siteLocationScreen,utility:otherUtilityDetailsScreen,wirelessOverview:wirelessOverviewScreen,wirelessConstruction,entrance:entranceDetails,documents:documentsScreen,review:reviewScreenApplicant})[currentRoute()](); }
 
 function siteLocationScreen(){
   const u=state.utility;
@@ -330,9 +354,9 @@ function siteLocationScreen(){
 
 function otherUtilityDetailsScreen(){
   const u=state.utility;
-  const permitQuestions=`<div class="field-grid">${select('Public utility?','publicUtility',[['yes','Yes'],['no','No — private / unfranchised']],u.publicUtility)}${select('Utility type','utilityType',enumChoices('/utilityTypeOptions'),u.utilityType)}${select('Where will this work occur?','jurisdiction',enumChoices('/utilityJurisdictionOptions').map(([v,l])=>[v,v==='none'?'None of these':l]),u.jurisdiction)}${select('Was this work performed as an emergency?','emergency',[['no','No'],['yes','Yes']],u.emergency)}${field('Ground disturbance (sq. ft.)','disturbance',u.disturbance,'number','min="0"')}${select('Traffic impact','trafficImpact',enumChoices('/utilityTrafficImpactOptions'),u.trafficImpact)}${select('Total duration','duration',enumChoices('/utilityDurationOptions'),u.duration)}</div>`;
+  const permitQuestions=`<div class="field-grid">${select('Public utility?','publicUtility',[['yes','Yes'],['no','No — private / unfranchised']],u.publicUtility)}${select('Utility type','utilityType',enumChoices('/utilityTypeOptions'),u.utilityType)}</div>`;
   const workQuestions=`${select('Scope of work','workType',enumChoices('/utilityWorkTypeOptions'),u.workType)}<div class="field"><label>Describe the proposed work</label><textarea name="description">${escapeHtml(u.description)}</textarea></div><fieldset><legend>Construction elements</legend>${checkbox('foundations','New pole / support structure foundations',u.foundations)}${checkbox('underground','Underground service feeds or conduit runs',u.underground)}${u.underground?field('Underground facility owner’s Delmarva 811 member ID','undergroundOwnerMemberId',u.undergroundOwnerMemberId):''}${checkbox('pavement','Pavement disturbance in travel lanes or shoulders',u.pavement)}${checkbox('electrical','New electrical components',u.electrical)}${checkbox('casing','Casing',u.casing)}</fieldset><fieldset><legend>Location-sensitive work</legend>${checkbox('railroad','Crossing over or under a railroad',u.railroad)}</fieldset><fieldset><legend>Traffic-control conditions</legend>${checkbox('detour','Work requires a detour of roadway traffic',u.detour)}${checkbox('complexConditions','Field conditions are complicated by a bridge, sharp curve, sight distance, or atypical geometry',u.complexConditions)}${checkbox('pedestrianImpact','Work substantially impacts an established pedestrian access route',u.pedestrianImpact)}${checkbox('travelLaneOccupation','Work is performed over a travel lane, turn lane, or bike lane',u.travelLaneOccupation)}</fieldset>${field('Number of DE MUTCD Typical Applications','taCount',u.taCount,'number','min="0" max="56"')}`;
-  return intro('Other utility work','Tell us about the water, sewer, gas, power, telephone, cable, or fiber work','These answers determine whether the work requires a Construction, Safety, or After-the-Fact Emergency permit.')+permitQuestions+workQuestions;
+  return intro('Required permit details',facts().permitType,'The permit type is already determined. These answers complete the application and determine its supporting documents.')+permitQuestions+workQuestions;
 }
 
 function wirelessOverviewScreen(){
@@ -375,15 +399,24 @@ function reviewScreenApplicant(){ return reviewScreen().replace('<dt>Utility per
 function bindValues(form){ const data=new FormData(form); const route=currentRoute();
   if(route==='activities'){ state.activities.utility=data.has('utilityActivity'); state.activities.entrance=data.has('entrance'); if(!state.activities.utility){ state.activities.utilitySubtype=''; state.activities.generalUtility=false; state.activities.smallWireless=false; } syncLegacyApplicationType(); }
   if(route==='utilityKind'){ state.activities.generalUtility=data.has('otherUtility'); state.activities.smallWireless=data.has('smallWireless'); state.activities.utilitySubtype=state.activities.generalUtility&&state.activities.smallWireless?'both':state.activities.smallWireless?'wireless':state.activities.generalUtility?'other':''; syncLegacyApplicationType(); }
+  if(route==='determination'){
+    const values=Object.fromEntries(data);
+    ['emergency','jurisdiction','disturbance','trafficImpact','duration'].forEach(key=>{ if(values[key]!==undefined) state.utility[key]=values[key]; });
+    if(hasWireless()){
+      state.requestedNodeCount=values.requestedNodeCount||'';
+      const count=Number(state.requestedNodeCount);
+      if(Number.isInteger(count)&&count>=1&&count<=50){ while(state.nodes.length<count) state.nodes.push(emptyNode(state.nodes.length+1)); state.nodes=state.nodes.slice(0,count); state.currentNode=Math.min(state.currentNode,state.nodes.length-1); }
+    }
+  }
   if(route==='contact') Object.assign(state.contact,Object.fromEntries(data));
-  if(route==='project'){ state.projectName=data.get('projectName')||state.projectName; if(hasWireless()){ state.requestedNodeCount=data.get('requestedNodeCount')||''; const count=Number(state.requestedNodeCount); if(Number.isInteger(count)&&count>=1&&count<=50){ while(state.nodes.length<count) state.nodes.push(emptyNode(state.nodes.length+1)); state.nodes=state.nodes.slice(0,count); state.currentNode=Math.min(state.currentNode,state.nodes.length-1); } } }
+  if(route==='project') state.projectName=data.get('projectName')||state.projectName;
   if(route==='site'||route==='utility'){ const target=state.utility; for(const [k,v] of data) target[k]=v; if(route==='utility'){ const checkboxFacts=['foundations','underground','pavement','electrical','casing','railroad','detour','complexConditions','pedestrianImpact','travelLaneOccupation']; checkboxFacts.forEach(k=>target[k]=data.has(k)); } }
   if(route==='wirelessOverview'||route==='wirelessConstruction'){ const target=state.nodes[state.currentNode]; for(const [k,v] of data) target[k]=v; if(route==='wirelessConstruction'){ const checkboxFacts=['foundations','underground','pavement','electrical','casing','railroad','detour','complexConditions','pedestrianImpact','travelLaneOccupation']; checkboxFacts.forEach(k=>target[k]=data.has(k)); } }
   if(route==='entrance'){ const values=Object.fromEntries(data); state.entrance.type=values.type||state.entrance.type; state.entrance.workType=values.entranceWorkType||state.entrance.workType; ['planningApproval','adtEntering','adtExiting','peakHourTrips','priorUse','proposedUse','stakesDate','taxParcelId'].forEach(k=>{ if(values[k]!==undefined) state.entrance[k]=values[k]; }); }
   if(route==='documents') form.querySelectorAll('input[type=file][data-document-key]').forEach(input=>{ if(input.files?.length) state.documentComplete[input.dataset.documentKey]=true; });
   if(route==='review') state.attestationAccepted=data.has('attest'); save(); }
 function save(){ rebuildGraph(); localStorage.setItem('deldot-poc',JSON.stringify(state)); }
-function render(){ $('#screen').innerHTML=renderCurrentScreen(); $('#back').disabled=step===0; $('#next').textContent=currentRoute()==='documents'&&hasWireless()&&state.currentNode<state.nodes.length-1?`Continue to Node ${state.currentNode+2} documents`:currentRoute()==='review'?(hasWireless()?`Pay ${money.format(facts().fee)} & submit`:activityCount()>1?'Submit permit applications':'Submit application'):'Continue'; $('#application-title').textContent=state.projectName||'New right-of-way application'; renderSummary(); renderGisSettings(); $('#notice').classList.add('hidden'); }
+function render(){ $('#screen').innerHTML=renderCurrentScreen(); $('#back').disabled=step===0; const noApplications=currentRoute()==='package'&&graphBoolean('/noCoveredPermitNeeded'); $('#next').textContent=noApplications?'Finish':currentRoute()==='documents'&&hasWireless()&&state.currentNode<state.nodes.length-1?`Continue to Node ${state.currentNode+2} documents`:currentRoute()==='review'?(hasWireless()?`Pay ${money.format(facts().fee)} & submit`:activityCount()>1?'Submit permit applications':'Submit application'):'Continue'; $('#application-title').textContent=state.projectName||'New right-of-way application'; renderSummary(); renderGisSettings(); $('#notice').classList.add('hidden'); }
 function renderSummary(){
   const f=facts();
   const completedNodes=f.wireless?state.nodes.filter(node=>graphBoolean(`/sites/#${node.id}/requiredAnswersComplete`)):[];
@@ -411,6 +444,7 @@ function renderSummary(){
 const gisSelect=(name,label,value)=>`<label class="gis-field"><span>${label}</span><select data-gis-fact="${name}"><option value="" ${value===''?'selected':''}>Not returned</option><option value="true" ${value==='true'?'selected':''}>Yes</option><option value="false" ${value==='false'?'selected':''}>No</option></select></label>`;
 function renderGisSettings(){
   const container=$('#gis-settings');
+  if(['activities','utilityKind','determination','package','contact','project'].includes(currentRoute())){ container.innerHTML=''; container.classList.add('hidden'); return; }
   const onWirelessRoute=['wirelessOverview','wirelessConstruction','documents'].includes(currentRoute())&&hasWireless();
   const activeNode=onWirelessRoute?state.nodes[state.currentNode]:null;
   const site=activeNode?nodeLocation(activeNode):hasSharedProjectSite()?state.utility:hasWireless()?state.nodes[state.currentNode]:null;
@@ -452,6 +486,15 @@ function visualizerGraph(){
     {path:'/contactFilerType',label:'Filing party',value:graphResult('/contactFilerType')||'Unanswered'}
   ];
   const consequences=[];
+  if(hasAnyActivity()) consequences.push(
+    {path:'/permitPackageDetermined',label:'Permit package',value:graphBoolean('/permitPackageDetermined')?'Determined':'Waiting for determining answers',reason:graphExplanation('/permitPackageDetermined')},
+    {path:'/utilityConstructionPermitNeeded',label:'Utility Construction Permit',value:graphResult('/utilityConstructionPermitNeeded')===null?'Not determined':graphBoolean('/utilityConstructionPermitNeeded')?'Needed':'Not needed',reason:graphExplanation('/utilityConstructionPermitNeeded')},
+    {path:'/utilitySafetyPermitNeeded',label:'Utility Safety Permit',value:graphResult('/utilitySafetyPermitNeeded')===null?'Not determined':graphBoolean('/utilitySafetyPermitNeeded')?'Needed':'Not needed',reason:graphExplanation('/utilitySafetyPermitNeeded')},
+    {path:'/emergencyUtilityPermitNeeded',label:'After-the-Fact Emergency Utility Permit',value:graphResult('/emergencyUtilityPermitNeeded')===null?'Not determined':graphBoolean('/emergencyUtilityPermitNeeded')?'Needed':'Not needed',reason:graphExplanation('/emergencyUtilityPermitNeeded')},
+    {path:'/smallWirelessPermitsNeeded',label:'Small Wireless Facility Permits',value:graphBoolean('/smallWirelessPermitsNeeded')?`${graphResult('/wirelessPermitCount')??'Unknown number'} needed`:'Not needed',reason:graphExplanation('/smallWirelessPermitsNeeded')},
+    {path:'/entrancePermitNeeded',label:'Entrance Permit',value:graphBoolean('/entrancePermitNeeded')?'Needed':'Not needed',reason:graphExplanation('/entrancePermitNeeded')},
+    {path:'/requiredPermitCount',label:'Total permits',value:graphResult('/requiredPermitCount')??'Not determined',reason:graphExplanation('/requiredPermitCount')}
+  );
   if(hasUtilityActivity()) consequences.push({path:'/includesUtilityWork',label:'Utility work identified',value:hasGeneralUtility()&&hasWireless()?'Small wireless + other listed utility work':hasGeneralUtility()?'Water/sewer/gas/power/telecom/fiber work':hasWireless()?'Small wireless':'Not determined',reason:'Follow-up activity answers'});
   if(hasGeneralUtility()){
     const tcpRequired=utilityTrafficControlPlanRequired();
@@ -553,11 +596,12 @@ function escapeHtml(value){ return String(value).replaceAll('&','&amp;').replace
 function escapeAttribute(value){ return escapeHtml(value).replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
 function setVisualizer(open){ $('#fact-visualizer').classList.toggle('open',open); $('#fact-visualizer').setAttribute('aria-hidden',String(!open)); $('#open-visualizer').setAttribute('aria-expanded',String(open)); $('#visualizer-scrim').classList.toggle('hidden',!open); if(open) renderVisualizer(); }
 
-$('#application-form').addEventListener('input',()=>{ bindValues($('#application-form')); renderSummary(); renderVisualizer(); });
-$('#application-form').addEventListener('change',(event)=>{ bindValues($('#application-form')); const conditionalQuestionChanged=(event.target.name==='underground'&&(currentRoute()==='utility'||currentRoute()==='wirelessConstruction'))||(event.target.name==='locationRelationship'&&currentRoute()==='wirelessOverview'); if((currentRoute()==='review'&&event.target.name==='attest')||conditionalQuestionChanged||currentRoute()==='entrance') render(); else { renderSummary(); renderGisSettings(); } renderVisualizer(); });
+$('#application-form').addEventListener('input',()=>{ bindValues($('#application-form')); rebuildGraph(); renderSummary(); renderVisualizer(); });
+$('#application-form').addEventListener('change',(event)=>{ bindValues($('#application-form')); rebuildGraph(); const conditionalQuestionChanged=(event.target.name==='underground'&&(currentRoute()==='utility'||currentRoute()==='wirelessConstruction'))||(event.target.name==='locationRelationship'&&currentRoute()==='wirelessOverview'); if((currentRoute()==='review'&&event.target.name==='attest')||conditionalQuestionChanged||currentRoute()==='entrance') render(); else { renderSummary(); renderGisSettings(); } renderVisualizer(); });
 $('#application-form').addEventListener('submit',(e)=>{
   e.preventDefault();
   bindValues(e.currentTarget);
+  rebuildGraph();
   const validity=validationFacts();
   let failures=validity.currentRequirements.filter(r=>!r.satisfied);
   if(step===reviewStep()&&!validity.readyToSubmit&&failures.length===0) failures=validity.requirements.filter(r=>!r.satisfied);
@@ -567,11 +611,15 @@ $('#application-form').addEventListener('submit',(e)=>{
     renderVisualizer();
     return;
   }
+  if(currentRoute()==='package'&&graphBoolean('/noCoveredPermitNeeded')){
+    $('#screen').innerHTML=intro('Determination complete','No DelDOT permit is required','Based on the activities and impacts reported, this project does not currently require one of the five permits covered by this application.')+'<div class="result"><strong>Keep this determination with your project records.</strong><p>If the work changes, update the answers and check the permit determination again.</p></div>';
+    $('.actions').classList.add('hidden'); renderVisualizer(); return;
+  }
   if(currentRoute()==='wirelessConstruction'&&hasWireless()&&state.currentNode<state.nodes.length-1){ state.currentNode++; step=routeStep('wirelessOverview'); save(); render(); return; }
   if(currentRoute()==='documents'&&hasWireless()&&state.currentNode<state.nodes.length-1){ state.currentNode++; save(); render(); return; }
   if(step===reviewStep()){
     state.submitted=true; save();
-    const submittedPermits=[hasGeneralUtility()?facts().permitType:'',hasWireless()?`${state.nodes.length} Small Wireless Facility Permit${state.nodes.length===1?'':'s'}`:'',hasEntrance()?'Entrance Permit':''].filter(Boolean);
+    const submittedPermits=[graphBoolean('/utilityConstructionPermitNeeded')?'Utility Construction Permit':'',graphBoolean('/utilitySafetyPermitNeeded')?'Utility Safety Permit':'',graphBoolean('/emergencyUtilityPermitNeeded')?'After-the-Fact Emergency Utility Permit':'',graphBoolean('/smallWirelessPermitsNeeded')?`${state.nodes.length} Small Wireless Facility Permit${state.nodes.length===1?'':'s'}`:'',graphBoolean('/entrancePermitNeeded')?'Entrance Permit':''].filter(Boolean);
     $('#screen').innerHTML=intro('Submitted','Your project has been submitted','You will receive a confirmation email with every application record produced for this project.')+`<div class="result"><strong>${submittedPermits.join(' + ')}</strong><p>DelDOT will coordinate review of the related permit applications and contact you if additional information is needed.</p></div>`;
     $('.actions').classList.add('hidden'); renderVisualizer(); return;
   }
