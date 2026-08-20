@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import * as FactGraph from '../demo/fg.js';
+import { explanationGroups, formatGraphExplanation } from './explanation.js';
 
 const xml = fs.readFileSync(new URL('./fact-dictionary.xml', import.meta.url), 'utf8');
 const dictionary = FactGraph.FactDictionaryFactory.importFromXml(xml);
@@ -35,7 +36,7 @@ function makeGraph(siteCount = 0) {
 }
 
 function set(graph, path, value) {
-  if (/\/(largestAntennaVolume|otherEquipmentVolume)$/.test(path) && typeof value === 'number') {
+  if (/\/(largestAntennaVolume|otherEquipmentVolume|poleHeight|facilityHeight)$/.test(path) && typeof value === 'number') {
     const decimals=(String(value).split('.')[1]||'').length;
     const denominator=10**decimals;
     value=FactGraph.RationalFactory(Math.round(value*denominator),denominator);
@@ -251,7 +252,7 @@ function capture(scenario, step, graph, paths) {
   apply(graph, { ...shared, '/includesUtilityActivity': true, '/includesSmallWirelessFacilities': true, '/requestedWirelessNodeCount': 1,
     ...eligibleWirelessSite(id), [sitePath(id, 'facilityHeight')]: 51 });
   capture(name, 'height facts', graph, [sitePath(id, 'poleHeight'), sitePath(id, 'facilityHeight'), sitePath(id, 'heightLimit'), sitePath(id, 'heightEligible'), sitePath(id, 'permitEligible')]);
-  expect(name, 'height facts', graph, sitePath(id, 'heightLimit'), 'complete', 50);
+  expect(name, 'height facts', graph, sitePath(id, 'heightLimit'), 'complete', '50/1');
   expect(name, 'height facts', graph, sitePath(id, 'heightEligible'), 'complete', false);
 }
 
@@ -328,8 +329,7 @@ function capture(scenario, step, graph, paths) {
     '/entrancePriorUse': 'Warehouse', '/entranceProposedUse': 'Expanded warehouse', '/entranceStakesDate': '2026-10-01', '/entranceTaxParcelId': 'TEST-PARCEL',
     '/entrancePlanningApprovalAttached': true, '/entranceOwnershipAttached': true, '/entranceRecordedPlanAttached': true,
     '/entranceConstructionPlanAttached': true, '/entranceCostEstimateAttached': true, '/entranceScheduleAttached': true });
-  capture(name, 'both activity sets evaluated', graph, ['/isMultiPermitProject', '/entrancePermitType', '/wirelessNodeCount', '/allWirelessNodesEligible', '/allSitesGisJurisdictionEligible', '/applicationComplete']);
-  expect(name, 'all activity sets evaluated', graph, '/isMultiPermitProject', 'complete', true);
+  capture(name, 'both activity sets evaluated', graph, ['/entrancePermitType', '/wirelessNodeCount', '/allWirelessNodesEligible', '/allSitesGisJurisdictionEligible', '/applicationComplete']);
   expect(name, 'all activity sets evaluated', graph, '/entrancePermitType', 'complete', 'Entrance Permit');
   expect(name, 'all activity sets evaluated', graph, '/wirelessNodeCount', 'complete', 1);
   expect(name, 'all activity sets evaluated', graph, '/allWirelessNodesEligible', 'complete', true);
@@ -376,12 +376,10 @@ function capture(scenario, step, graph, paths) {
   const name = '15 · All three activity sets in one project';
   const { graph } = makeGraph();
   apply(graph, { '/includesUtilityActivity': true, '/includesGeneralUtilityWork': true, '/includesSmallWirelessFacilities': true, '/includesEntranceWork': true });
-  capture(name, 'all activity sets selected', graph, ['/utilitySubtypeSelectionValid', '/isGeneralUtilityApplication', '/isSmallWirelessApplication', '/entrancePermitRequested', '/isMultiPermitProject']);
+  capture(name, 'all activity sets selected', graph, ['/utilitySubtypeSelectionValid', '/isSmallWirelessApplication', '/entrancePermitRequested']);
   expect(name, 'all activity sets selected', graph, '/utilitySubtypeSelectionValid', 'complete', true);
-  expect(name, 'all activity sets selected', graph, '/isGeneralUtilityApplication', 'complete', true);
   expect(name, 'all activity sets selected', graph, '/isSmallWirelessApplication', 'complete', true);
   expect(name, 'all activity sets selected', graph, '/entrancePermitRequested', 'complete', true);
-  expect(name, 'all activity sets selected', graph, '/isMultiPermitProject', 'complete', true);
 }
 
 // 16. Decimal equipment volumes remain valid graph values and retain qualification semantics.
@@ -390,6 +388,8 @@ function capture(scenario, step, graph, paths) {
   const { graph, ids: [id] } = makeGraph(1);
   apply(graph, { ...eligibleWirelessSite(id), [sitePath(id, 'largestAntennaVolume')]: 5.5, [sitePath(id, 'otherEquipmentVolume')]: 27.25 });
   expect(name, 'decimal values supplied', graph, sitePath(id, 'sizeEligible'), 'complete', true);
+  apply(graph, { [sitePath(id, 'poleHeight')]: 40.5, [sitePath(id, 'facilityHeight')]: 49.75 });
+  expect(name, 'decimal heights supplied', graph, sitePath(id, 'heightEligible'), 'complete', true);
   apply(graph, { [sitePath(id, 'largestAntennaVolume')]: 6.5 });
   expect(name, 'statutory threshold exceeded', graph, sitePath(id, 'sizeEligible'), 'complete', false);
 }
@@ -405,6 +405,25 @@ function capture(scenario, step, graph, paths) {
     const pass = dictionaryPaths.has(path);
     checks.push({ scenario:name, step:'static source scan', path, expectedStatus:'declared', expectedValue:true, actual:{status:pass?'declared':'missing',value:pass}, pass });
   }
+}
+
+// 18. Explanations expose writable leaves and preserve the engine's fact groups.
+{
+  const name = '18 · Native explanation leaves and groups';
+  const { graph } = makeGraph();
+  apply(graph, { '/utilityIsEmergency': false, '/utilityJurisdiction': 'row', '/utilityGroundDisturbanceSqFt': 480,
+    '/utilityTrafficImpact': 'none', '/utilityDuration': 'day' });
+  const groups=explanationGroups(graph.explain('/utilityPermitType'));
+  const flattened=groups.flat();
+  for(const path of ['/utilityIsEmergency','/utilityJurisdiction','/utilityGroundDisturbanceSqFt']){
+    const pass=flattened.includes(path);
+    checks.push({scenario:name,step:'construction permit explanation',path,expectedStatus:'writable leaf',expectedValue:true,actual:{status:pass?'writable leaf':'missing',value:pass},pass});
+  }
+  const excludesIntermediate=!flattened.includes('/utilityIsInDelDOTJurisdiction');
+  checks.push({scenario:name,step:'construction permit explanation',path:'/utilityIsInDelDOTJurisdiction',expectedStatus:'excluded intermediate',expectedValue:true,actual:{status:excludesIntermediate?'excluded intermediate':'included',value:excludesIntermediate},pass:excludesIntermediate});
+  const text=formatGraphExplanation(graph,'/utilityPermitType');
+  const preservesGroups=text.includes('determining groups')&&groups.length===3;
+  checks.push({scenario:name,step:'group formatting',path:'/utilityPermitType',expectedStatus:'grouped',expectedValue:true,actual:{status:preservesGroups?'grouped':'flattened',value:text},pass:preservesGroups});
 }
 
 const failures = checks.filter(check => !check.pass);

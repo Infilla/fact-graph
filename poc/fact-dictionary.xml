@@ -13,15 +13,9 @@
       <Dependency path="/includesSmallWirelessFacilities"/>
     </Any></Derived></Fact>
     <Fact path="/isSmallWirelessApplication"><Derived><Dependency path="/includesSmallWirelessFacilities"/></Derived></Fact>
-    <Fact path="/isGeneralUtilityApplication"><Derived><Dependency path="/includesGeneralUtilityWork"/></Derived></Fact>
     <Fact path="/entrancePermitRequested"><Derived><Dependency path="/includesEntranceWork"/></Derived></Fact>
     <Fact path="/utilityPermitRequested"><Derived><Dependency path="/includesGeneralUtilityWork"/></Derived></Fact>
     <Fact path="/atLeastOneActivitySelected"><Derived><Any><Dependency path="/includesUtilityActivity"/><Dependency path="/includesEntranceWork"/></Any></Derived></Fact>
-    <Fact path="/isMultiPermitProject"><Derived><Any>
-      <All><Dependency path="/includesGeneralUtilityWork"/><Dependency path="/includesSmallWirelessFacilities"/></All>
-      <All><Dependency path="/includesGeneralUtilityWork"/><Dependency path="/includesEntranceWork"/></All>
-      <All><Dependency path="/includesSmallWirelessFacilities"/><Dependency path="/includesEntranceWork"/></All>
-    </Any></Derived></Fact>
     <Fact path="/projectName"><Name>Project name</Name><Writable><String/></Writable></Fact>
     <Fact path="/contactCompany"><Writable><String/></Writable></Fact>
     <Fact path="/contactFirstName"><Writable><String/></Writable></Fact>
@@ -134,7 +128,6 @@
     <Fact path="/wirelessPermitType"><Derived><String>Small Wireless Facility Permit</String></Derived></Fact>
     <Fact path="/utilityDrawingRequired"><Derived><True/></Derived></Fact>
     <Fact path="/utilityOccupancyAgreementRequired"><Derived><Not><Dependency path="/utilityIsPublic"/></Not></Derived></Fact>
-    <Fact path="/utilityAgentApprovalRequired"><Derived><Dependency path="/isAuthorizedAgent"/></Derived></Fact>
     <Fact path="/utilityDrawingRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/utilityDrawingRequired"/></All></Derived></Fact>
     <Fact path="/utilityOccupancyAgreementRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/utilityOccupancyAgreementRequired"/></All></Derived></Fact>
     <Fact path="/utilityTrafficControlPlanRequiredByUtility"><Derived><All><Dependency path="/utilityPermitRequested"/><Dependency path="/utilityRequiresTrafficControlPlan"/></All></Derived></Fact>
@@ -154,7 +147,6 @@
     <Fact path="/utilityDocumentScope"><Derived><String>permit</String></Derived></Fact>
     <Fact path="/utilityDrawingAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/utilityOccupancyAgreementAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityAgentApprovalAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/utilityTrafficControlPlanAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/utilityFoundationDesignAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/utilityCasingSpecificationsAttached"><Writable><Boolean/></Writable></Fact>
@@ -190,7 +182,6 @@
       <GreaterThan><Left><Dependency path="/entrancePeakHourTrips"/></Left><Right><Int>50</Int></Right></GreaterThan>
     </Any></Derived></Fact>
     <Fact path="/entrancePedestrianEvidenceRequired"><Derived><GreaterThanOrEqual><Left><Dependency path="/entranceTotalAdt"/></Left><Right><Int>2000</Int></Right></GreaterThanOrEqual></Derived></Fact>
-    <Fact path="/entranceSpecialReviewRequired"><Derived><Any><Dependency path="/anySiteGisSpecialReviewRequired"/><Dependency path="/entrancePreSubmittalMeetingRequired"/></Any></Derived></Fact>
     <Fact path="/crossPermitCoordinationRequired"><Derived><All><Dependency path="/entrancePermitRequested"/><Dependency path="/anySiteHasUndergroundWork"/></All></Derived></Fact>
     <Fact path="/entrancePermitEligible"><Derived><All><Dependency path="/entrancePermitRequested"/><Dependency path="/allSitesGisJurisdictionEligible"/></All></Derived></Fact>
     <Fact path="/entrancePermitType"><Derived><Switch>
@@ -273,8 +264,8 @@
     <Fact path="/sites/*/poleOwner"><Writable><String/></Writable></Fact>
     <Fact path="/sites/*/largestAntennaVolume"><Writable><Rational/></Writable></Fact>
     <Fact path="/sites/*/otherEquipmentVolume"><Writable><Rational/></Writable></Fact>
-    <Fact path="/sites/*/poleHeight"><Writable><Int/></Writable></Fact>
-    <Fact path="/sites/*/facilityHeight"><Writable><Int/></Writable></Fact>
+    <Fact path="/sites/*/poleHeight"><Writable><Rational/></Writable></Fact>
+    <Fact path="/sites/*/facilityHeight"><Writable><Rational/></Writable></Fact>
     <Fact path="/sites/*/hasFoundation"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/hasUndergroundWork"><Writable><Boolean/></Writable></Fact>
     <Fact path="/sites/*/undergroundOwnerMemberId"><Writable><String/></Writable></Fact>
@@ -339,10 +330,10 @@
     <Fact path="/sites/*/heightEligible">
       <Derived><LessThanOrEqual>
         <Left><Dependency path="../facilityHeight"/></Left>
-        <Right><GreaterOf><Add><Dependency path="../poleHeight"/><Int>10</Int></Add><Int>50</Int></GreaterOf></Right>
+        <Right><GreaterOf><Add><Dependency path="../poleHeight"/><Rational>10/1</Rational></Add><Rational>50/1</Rational></GreaterOf></Right>
       </LessThanOrEqual></Derived>
     </Fact>
-    <Fact path="/sites/*/heightLimit"><Derived><GreaterOf><Add><Dependency path="../poleHeight"/><Int>10</Int></Add><Int>50</Int></GreaterOf></Derived></Fact>
+    <Fact path="/sites/*/heightLimit"><Derived><GreaterOf><Add><Dependency path="../poleHeight"/><Rational>10/1</Rational></Add><Rational>50/1</Rational></GreaterOf></Derived></Fact>
     <Fact path="/sites/*/statutoryQualificationSatisfied">
       <Derived><All>
         <Dependency path="../sizeEligible"/>
