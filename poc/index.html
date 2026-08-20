@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DelDOT integrated utility application</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="#">DelDOT <span>Permit applications</span></a>
+    <span class="prototype">Proof of concept</span>
+  </header>
+
+  <main class="shell">
+    <aside aria-label="Application progress">
+      <p class="eyebrow">Application</p>
+      <h1 id="application-title">New right-of-way application</h1>
+      <div class="save-status"><span></span> Draft saved locally</div>
+      <button type="button" id="reset-application" class="reset-button">Reset application</button>
+      <div id="gis-settings" class="gis-settings" aria-live="polite"></div>
+    </aside>
+
+    <section class="workspace">
+      <div id="notice" class="notice hidden" role="status"></div>
+      <form id="application-form" novalidate>
+        <div id="screen"></div>
+        <footer class="actions">
+          <button type="button" id="back" class="secondary">Back</button>
+          <button type="submit" id="next">Continue</button>
+        </footer>
+      </form>
+    </section>
+
+    <aside class="summary" aria-label="Application summary">
+      <p class="eyebrow">Application summary</p>
+      <div id="summary"></div>
+      <details>
+        <summary>About this summary</summary>
+        <p id="summary-explanation">This summary updates as you answer questions. Requirements and fees may change based on your project.</p>
+      </details>
+    </aside>
+  </main>
+
+  <template id="review-template">
+    <div class="review-card"><h3></h3><dl></dl></div>
+  </template>
+
+  <button type="button" id="open-visualizer" class="visualizer-launch" aria-controls="fact-visualizer" aria-expanded="false">
+    <span class="graph-icon" aria-hidden="true">⌘</span> Fact Graph
+  </button>
+  <div id="visualizer-scrim" class="visualizer-scrim hidden"></div>
+  <aside id="fact-visualizer" class="fact-visualizer" aria-label="Live Fact Graph visualizer" aria-hidden="true">
+    <header class="visualizer-header">
+      <div><p class="eyebrow">Live inspector</p><h2>Fact Graph</h2></div>
+      <button type="button" id="close-visualizer" class="icon-button" aria-label="Close Fact Graph visualizer">×</button>
+    </header>
+    <p class="visualizer-help">Blue facts come from the applicant or an external source such as GIS. Green and red facts are consequences derived from them.</p>
+    <div id="visualizer-content" class="visualizer-content"></div>
+  </aside>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

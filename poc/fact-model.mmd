@@ -1,0 +1,170 @@
+flowchart LR
+  classDef input fill:#eaf5fb,stroke:#1769aa,color:#12385b,stroke-width:1.5px
+  classDef completeness fill:#fff8df,stroke:#c58a00,color:#4a3600,stroke-width:1.5px
+  classDef derived fill:#eef9f3,stroke:#19734a,color:#104b32,stroke-width:1.5px
+  classDef blocking fill:#fff0f0,stroke:#a92727,color:#6f1717,stroke-width:1.5px
+  classDef output fill:#f1effa,stroke:#6852a3,color:#30225c,stroke-width:1.5px
+
+  subgraph SHARED["Shared project facts"]
+    ACTIVITIES["Applicant activities · select any<br/>general utility · small wireless · entrance"]:::input
+    TYPE["/isSmallWirelessApplication<br/>derived from wireless activity"]:::derived
+    GENERAL_TYPE["/isGeneralUtilityApplication<br/>derived from general utility activity"]:::derived
+    ENTRANCE_REQUESTED["/entrancePermitRequested<br/>derived from entrance activity"]:::derived
+    MULTI["/isMultiPermitProject<br/>two or more activity sets"]:::derived
+    PROJECT["/projectName"]:::input
+    CONTACT["/contact*<br/>company · name · email · phone · filer"]:::input
+    SHARED_COMPLETE["/sharedApplicationFactsComplete"]:::completeness
+    ACTIVITIES --> TYPE
+    ACTIVITIES --> GENERAL_TYPE
+    ACTIVITIES --> ENTRANCE_REQUESTED
+    ACTIVITIES --> MULTI
+    ACTIVITIES --> SHARED_COMPLETE
+    PROJECT --> SHARED_COMPLETE
+    CONTACT --> SHARED_COMPLETE
+  end
+
+  subgraph ENTRANCE["Entrance permit · same project and site"]
+    ENTRANCE_DETAILS["/entranceType · /entranceWorkType<br/>prior use · proposed use · parcel · stakes"]:::input
+    ENTRANCE_TRAFFIC["ADT entering + exiting<br/>peak-hour trips"]:::input
+    TOTAL_ADT["/entranceTotalAdt"]:::derived
+    TOA["/entranceTrafficOperationalAnalysisRequired<br/>total ADT ≥ 200"]:::derived
+    MEETING["/entrancePreSubmittalMeetingRequired<br/>ADT ≥ 500 OR peak hour > 50"]:::derived
+    PEDESTRIAN["/entrancePedestrianEvidenceRequired<br/>ADT ≥ 2,000"]:::derived
+    ENTRANCE_DOCS["/entranceDocumentsComplete<br/>base + derived conditional documents"]:::completeness
+    ENTRANCE_COMPLETE["/entranceRequirementsSatisfied"]:::completeness
+    ENTRANCE_PERMIT["/entrancePermitType<br/>Entrance Permit"]:::derived
+    ENTRANCE_TRAFFIC --> TOTAL_ADT --> TOA --> ENTRANCE_DOCS
+    TOTAL_ADT --> MEETING
+    TOTAL_ADT --> PEDESTRIAN --> ENTRANCE_DOCS
+    ENTRANCE_DETAILS --> ENTRANCE_COMPLETE
+    ENTRANCE_DOCS --> ENTRANCE_COMPLETE
+    GIS_JURISDICTION --> ENTRANCE_COMPLETE
+    ENTRANCE_REQUESTED --> ENTRANCE_PERMIT
+  end
+
+  COMMON_IMPACTS["Shared site construction facts<br/>underground · pavement · traffic · pedestrian"]:::input
+  COORDINATION["/crossPermitCoordinationRequired<br/>entrance requested AND underground utility work"]:::derived
+  ENTRANCE_REQUESTED --> COORDINATION
+  COMMON_IMPACTS --> COORDINATION
+
+  subgraph GIS["External source facts · simulated GIS"]
+    GIS_ROW["/*/gisIsStateMaintainedRoad"]:::input
+    GIS_LIMITED["/*/gisIsLimitedAccessRoad"]:::input
+    GIS_AIRPORT["/*/gisIsInAirportAirspace"]:::input
+    GIS_RAIL["/*/gisIsNearRailroad"]:::input
+    GIS_JURISDICTION["/*/gisJurisdictionEligible"]:::derived
+    GIS_REVIEW["/*/gisSpecialReviewRequired<br/>limited-access routing"]:::derived
+    GIS_ROW --> GIS_JURISDICTION
+    GIS_LIMITED --> GIS_REVIEW
+  end
+
+  subgraph PROJECT_DOCS["Project-scoped documents · required once"]
+    AGENT["/isAuthorizedAgent"]:::input
+    MLUOA["/mlUoaAttached<br/>required once"]:::input
+    AGENT_FORM["/authorizedAgentFormAttached"]:::input
+    AGENT_REQ["/authorizedAgentRequirementSatisfied<br/>NOT agent OR form attached"]:::derived
+    PROJECT_DOCS_COMPLETE["/projectDocumentsComplete"]:::completeness
+    AGENT --> AGENT_REQ
+    AGENT_FORM --> AGENT_REQ
+    AGENT_REQ --> PROJECT_DOCS_COMPLETE
+    MLUOA --> PROJECT_DOCS_COMPLETE
+  end
+
+  subgraph UTILITY["Utility branch · one application"]
+    EMERGENCY["/utilityIsEmergency<br/>Yes · No · Unknown"]:::input
+    JURISDICTION["/utilityJurisdiction<br/>ROW · easement · aerial · outside"]:::input
+    DISTURBANCE["/utilityGroundDisturbanceSqFt"]:::input
+    TRAFFIC["/utilityTrafficImpact<br/>None · lane · major"]:::input
+    DURATION["/utilityDuration<br/>≤ 1 day · > 1 day"]:::input
+    DETAILS["Other required utility answers<br/>public · type · work · description · TAs"]:::input
+    UC["/utilityRequiredAnswersComplete"]:::completeness
+    PERMIT["/utilityPermitOutcome"]:::derived
+    UE["/utilityPermitEligible"]:::blocking
+    UDR["/utilityRequiredDocuments"]:::derived
+    UDC["/utilityDocumentsComplete"]:::completeness
+    EMERGENCY -- "Yes → Emergency permit<br/>No → evaluate remaining facts" --> PERMIT
+    JURISDICTION -- "Outside → No permit<br/>DelDOT jurisdiction → continue" --> PERMIT
+    DISTURBANCE -- "> 0 → Construction permit<br/>= 0 → evaluate traffic" --> PERMIT
+    TRAFFIC -- "Lane or major impact → Safety permit<br/>None → evaluate duration" --> PERMIT
+    DURATION -- "> 1 day → Safety permit<br/>≤ 1 day → No permit" --> PERMIT
+    PERMIT --> UE
+    EMERGENCY --> UC
+    JURISDICTION --> UC
+    DISTURBANCE --> UC
+    TRAFFIC --> UC
+    DURATION --> UC
+    DETAILS --> UC
+    DETAILS --> UDR
+    TRAFFIC --> UDR
+    UDR --> UDC
+  end
+
+  subgraph WIRELESS["Wireless branch · node collection"]
+    NODE_COUNT["/requestedWirelessNodeCount"]:::input
+    NODES["/sites/*<br/>typed project site + wireless node records"]:::input
+    LOCATION_SOURCE["/*/usesProjectSiteLocation<br/>reuse project address · county · lat/long · GIS"]:::input
+    SITE_KIND["/*/isProjectSite · /*/isWirelessNode"]:::input
+    COMMON_SITE["/* shared site facts<br/>underground · pavement · electrical<br/>detour · field conditions · pedestrian · travel lane"]:::input
+    UNDERGROUND_ID["/*/undergroundOwnerRequirementSatisfied"]:::completeness
+    NC["/*/requiredAnswersComplete"]:::completeness
+    SIZE["/*/sizeEligible<br/>antenna ≤ 6 · equipment ≤ 28"]:::derived
+    HEIGHT["/*/heightEligible"]:::derived
+    NE["/*/permitEligible<br/>independent result for every node"]:::blocking
+    NDR["/*/requiredDocuments"]:::derived
+    NDC["/*/documentsComplete"]:::completeness
+    ALL_ELIGIBLE["/allWirelessNodesEligible"]:::derived
+    ALL_NODES["/allWirelessNodesComplete"]:::completeness
+    FEE["/wirelessTotalFee<br/>$100 × collection size"]:::derived
+
+    NODE_COUNT --> NODES
+    LOCATION_SOURCE --> NODES
+    SITE_KIND --> NODES
+    NODES --> COMMON_SITE
+    COMMON_SITE --> UNDERGROUND_ID
+    NODES --> NC
+    NODES --> SIZE --> NE
+    NODES --> HEIGHT --> NE
+    GIS_JURISDICTION --> NE
+    GIS_AIRPORT --> NDR
+    GIS_RAIL --> NDR
+    COMMON_SITE --> NDR
+    NE --> ALL_ELIGIBLE
+    NODES --> NDR --> NDC
+    NC --> ALL_NODES
+    NE --> ALL_NODES
+    NDC --> ALL_NODES
+    NODES --> FEE
+    COUNT_MATCH["/wirelessNodeCountMatchesRequest"]:::completeness
+    NODE_COUNT --> COUNT_MATCH
+    NODES --> COUNT_MATCH
+  end
+
+  GENERAL_TYPE -. "True" .-> EMERGENCY
+  TYPE -. "True" .-> NODE_COUNT
+
+  TYPE --> UTILITY_BRANCH["/generalUtilityRequirementsSatisfied<br/>isSmallWireless OR<br/>(general utility answers AND eligibility AND documents)"]:::completeness
+  UC --> UTILITY_BRANCH
+  UE --> UTILITY_BRANCH
+  UDC --> UTILITY_BRANCH
+
+  GENERAL_TYPE --> WIRELESS_BRANCH["/smallWirelessRequirementsSatisfied<br/>isGeneralUtility OR allWirelessNodesComplete"]:::completeness
+  ALL_NODES --> WIRELESS_BRANCH
+  COUNT_MATCH --> WIRELESS_BRANCH
+
+  SHARED_COMPLETE --> APPLICATION_COMPLETE["/applicationComplete<br/>shared project + every requested permit"]:::completeness
+  PROJECT_DOCS_COMPLETE --> APPLICATION_COMPLETE
+  UTILITY_BRANCH --> APPLICATION_COMPLETE
+  WIRELESS_BRANCH --> APPLICATION_COMPLETE
+  ENTRANCE_COMPLETE --> APPLICATION_COMPLETE
+
+  ATTEST["/attestationsAccepted"]:::input
+  APPLICATION_COMPLETE --> READY["/readyToSubmit"]:::derived
+  ATTEST --> READY
+
+  READY -- "True · utility" --> SUBMIT["Submit · $0"]:::output
+  READY -- "True · integrated project" --> BOTH["Submit one package<br/>Entrance Permit + Utility Permit"]:::output
+  READY -- "True · wireless" --> PAY["One package checkout"]:::output
+  FEE --> PAY
+  PAY --> EUS["Transmit each node as<br/>a distinct EUS application"]:::output
+  SUBMIT --> EUS
+  READY -- "False" --> EXPLAIN["Explain unsatisfied facts"]:::blocking
