@@ -16,6 +16,8 @@ Open `http://localhost:8000/poc/`.
 
 `app.js` loads `fact-dictionary.xml` with the repository's compiled FactGraph browser runtime. Applicant answers and simulated GIS results are written as source facts. The graph first derives the complete permit package and permit count, then exposes a form manifest identifying the shared, site, permit, node, entrance, and document question groups required to finish it. Eligibility, GIS jurisdiction, document requirements, fees, completion, and submission readiness are also read back from derived facts.
 
+The determination screen is part of that manifest: `/askUtilityDeterminationQuestions` and `/askWirelessDeterminationQuestions` decide which determining fieldsets appear. General utility routing consumes the `/utilityPermitIdentity` enum, while `/utilityPermitType` is only its applicant-facing label.
+
 Open **Fact Graph** and use **Simulated GIS source** to change external facts for the current site. A state-maintained road that is not limited access satisfies GIS jurisdiction. Airport-airspace and railroad-proximity results add their corresponding review documents through the graph.
 
 ## Model

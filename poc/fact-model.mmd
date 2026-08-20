@@ -7,6 +7,7 @@ flowchart LR
 
   subgraph PROJECT["Shared project"]
     ACTIVITIES["Activity facts"]:::source
+    DET_MANIFEST["Determination manifest<br/>/askUtilityDeterminationQuestions<br/>/askWirelessDeterminationQuestions"]:::derived
     DETERMINANTS["Permit-determining answers<br/>emergency · jurisdiction · disturbance<br/>traffic · duration · wireless count"]:::source
     PACKAGE_DONE["/permitPackageDetermined"]:::complete
     NEEDED["Five explicit outcomes<br/>/utilityConstructionPermitNeeded<br/>/utilitySafetyPermitNeeded<br/>/emergencyUtilityPermitNeeded<br/>/smallWirelessPermitsNeeded<br/>/entrancePermitNeeded"]:::derived
@@ -15,7 +16,7 @@ flowchart LR
     CONTACT["/projectName + /contact*"]:::source
     SHARED["/sharedApplicationFactsComplete"]:::complete
     ACTIVITIES --> SHARED
-    ACTIVITIES --> DETERMINANTS --> PACKAGE_DONE --> NEEDED --> PERMIT_COUNT --> QUESTION_MANIFEST
+    ACTIVITIES --> DET_MANIFEST --> DETERMINANTS --> PACKAGE_DONE --> NEEDED --> PERMIT_COUNT --> QUESTION_MANIFEST
     CONTACT --> SHARED
   end
 
@@ -34,11 +35,12 @@ flowchart LR
   subgraph GENERAL["Other listed utility work"]
     U_RAW["Raw answers<br/>/utilityJurisdiction<br/>/utilityTrafficImpact<br/>/utilityDuration"]:::source
     U_DERIVED["Derived jurisdiction, traffic<br/>and duration booleans"]:::derived
-    U_PERMIT["/utilityPermitType<br/>Emergency · Construction · Safety · None"]:::derived
+    U_ID["/utilityPermitIdentity enum<br/>emergency · construction · safety · none"]:::derived
+    U_PERMIT["/utilityPermitType<br/>applicant-facing label"]:::derived
     U_ANSWERS["/utilityRequiredAnswersComplete"]:::complete
     U_DOCS["/utilityDocumentsComplete"]:::complete
     U_DONE["/generalUtilityRequirementsSatisfied"]:::complete
-    U_RAW --> U_DERIVED --> U_PERMIT
+    U_RAW --> U_DERIVED --> U_ID --> U_PERMIT
     U_RAW --> U_ANSWERS
     ANY_TCP --> U_DOCS
     GIS_REVIEWS --> U_DOCS

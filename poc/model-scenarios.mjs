@@ -374,6 +374,7 @@ function capture(scenario, step, graph, paths) {
   apply(graph,{'/requestedWirelessNodeCount':3,'/utilityIsEmergency':false,'/utilityJurisdiction':'row','/utilityGroundDisturbanceSqFt':25,'/utilityTrafficImpact':'none','/utilityDuration':'day'});
   expect(name,'determining answers complete',graph,'/permitPackageDetermined','complete',true);
   expect(name,'utility outcome',graph,'/utilityPermitType','complete','Utility Construction Permit');
+  expect(name,'stable utility identity',graph,'/utilityPermitIdentity','complete','construction');
   expect(name,'construction permit needed',graph,'/utilityConstructionPermitNeeded','complete',true);
   expect(name,'safety permit not needed',graph,'/utilitySafetyPermitNeeded','complete',false);
   expect(name,'emergency permit not needed',graph,'/emergencyUtilityPermitNeeded','complete',false);
@@ -391,6 +392,23 @@ function capture(scenario, step, graph, paths) {
   expect(name,'contact remains unanswered',graph,'/contactCompany','incomplete');
   expect(name,'utility detail remains unanswered',graph,'/utilityType','incomplete');
   expect(name,'entrance detail remains unanswered',graph,'/entranceType','incomplete');
+}
+
+// 21. Excluding general utility work remains visible in a mixed permit package.
+{
+  const name='21 · Mixed package preserves utility exclusion';
+  const {graph}=makeGraph();
+  apply(graph,{'/includesUtilityActivity':true,'/includesGeneralUtilityWork':true,'/includesEntranceWork':true,
+    '/utilityIsEmergency':false,'/utilityJurisdiction':'none','/utilityGroundDisturbanceSqFt':0,'/utilityTrafficImpact':'none','/utilityDuration':'day'});
+  expect(name,'determination manifest',graph,'/askUtilityDeterminationQuestions','complete',true);
+  expect(name,'determination manifest',graph,'/askWirelessDeterminationQuestions','complete',false);
+  expect(name,'utility identity',graph,'/utilityPermitIdentity','complete','none');
+  expect(name,'utility excluded',graph,'/generalUtilityExcluded','complete',true);
+  expect(name,'utility details omitted',graph,'/askGeneralUtilityQuestions','complete',false);
+  expect(name,'entrance details retained',graph,'/askEntranceQuestions','complete',true);
+  expect(name,'site retained',graph,'/askProjectSiteQuestions','complete',true);
+  expect(name,'one permit remains',graph,'/requiredPermitCount','complete',1);
+  expect(name,'package is not empty',graph,'/noCoveredPermitNeeded','complete',false);
 }
 
 // 14. One project-scoped agent form can satisfy multiple permit consumers.

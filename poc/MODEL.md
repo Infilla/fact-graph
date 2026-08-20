@@ -11,7 +11,7 @@ With `/entrancePermitRequested = true`, the graph derives both permit outcomes, 
 ```mermaid
 flowchart LR
   ACT["Activities + utility subtype"] --> DET["Front-loaded determining facts<br/>emergency · jurisdiction · disturbance<br/>traffic · duration · wireless count"]
-  DET --> DONE["permitPackageDetermined"]
+  DET --> DONE["permitPackageDetermined<br/>askUtilityDeterminationQuestions<br/>askWirelessDeterminationQuestions"]
   DONE --> TYPES["Explicit needed facts<br/>utilityConstructionPermitNeeded<br/>utilitySafetyPermitNeeded<br/>emergencyUtilityPermitNeeded<br/>smallWirelessPermitsNeeded + count<br/>entrancePermitNeeded"]
   TYPES --> MANIFEST["Graph-derived question manifest<br/>askShared · askSite · askUtility<br/>askWireless · askEntrance · askDocuments"]
   MANIFEST --> DETAILS["Applicant, site, permit, and node facts"]
@@ -63,6 +63,8 @@ The fact graph is the executable source for document triggers and their displaye
 | Ready to submit | application complete, eligibility, documents, attestations | Sole fact used to enable submission |
 
 The browser does not use HTML `required` validation. Every displayed requirement now names a real dictionary path, and aggregate completion and submission readiness come from the graph. The inspector reads the engine's explanation tree rather than reimplementing permit rules in JavaScript. Blank material questions remain unknown until the applicant visits and answers the applicable screen.
+
+General utility permit identity is represented by `/utilityPermitIdentity`, an enum (`construction`, `safety`, `emergency`, or `none`). The applicant-facing `/utilityPermitType` label is derived from that identity. Navigation and the five explicit `*PermitNeeded` facts consume the enum, so changing display copy cannot change routing. `/generalUtilityExcluded` independently records that reported utility work produced no permit, including when another activity still produces an Entrance or Small Wireless permit.
 
 For small wireless, the requested permit type and node eligibility are separate. Selecting small wireless establishes the requested permit as a Small Wireless Facility Permit. Missing or disqualifying equipment and height answers affect only that node’s `/permitEligible` fact and the all-node aggregate; they do not change the requested permit type.
 
