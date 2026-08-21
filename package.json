@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "qa:model": "node poc/model-scenarios.mjs --summary",
+    "qa:browser": "playwright test poc/browser-qa.spec.js --workers=1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.1"
+  }
+}

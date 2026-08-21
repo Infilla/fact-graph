@@ -3,6 +3,8 @@ target/
 
 # node
 node_modules/
+test-results/
+playwright-report/
 
 # Metals
 .bsp/
