@@ -623,6 +623,18 @@ function capture(scenario, step, graph, paths) {
   }
 }
 
+// 27. UI decisions use domain facts, never applicant-facing permit labels.
+{
+  const name = '27 · No display-string permit logic';
+  const forbidden = [/startsWith\(['"]No DelDOT/, /===\s*['"]Entrance Permit['"]/, /===\s*['"]Not determined['"]/];
+  for(const pattern of forbidden){
+    const pass=!pattern.test(appSource);
+    checks.push({scenario:name,step:'source decision scan',path:String(pattern),expectedStatus:'absent',expectedValue:true,actual:{status:pass?'absent':'display comparison found',value:pass},pass});
+  }
+  const redundantGuard=/hasGeneralUtility\(\)\s*&&\s*graphBoolean\(['"]\/generalUtilityApplicationRequired['"]\)/.test(appSource);
+  checks.push({scenario:name,step:'derived application guard',path:'/generalUtilityApplicationRequired',expectedStatus:'direct graph fact',expectedValue:true,actual:{status:redundantGuard?'redundant guard':'direct graph fact',value:!redundantGuard},pass:!redundantGuard});
+}
+
 const failures = checks.filter(check => !check.pass);
 const report = { scenarios, checks: { total: checks.length, passed: checks.length - failures.length, failed: failures.length, failures } };
 console.log(JSON.stringify(process.argv.includes('--summary') ? report.checks : report, null, 2));
