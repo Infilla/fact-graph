@@ -27,10 +27,17 @@ test('general utility safety route validates current values and resets cleanly',
   await page.fill('[name=disturbance]', '0');
   await page.selectOption('[name=trafficImpact]', 'lane');
   await page.selectOption('[name=duration]', 'longer');
+  await expect(page.locator('#summary')).toContainText('Utility Safety Permit');
+  await expect(page.locator('#summary')).not.toContainText('Permit determination pending');
+  await page.locator('#open-visualizer').click();
+  await expect(page.locator('#visualizer-content')).toContainText('Utility Safety Permit: Needed');
+  const safetyFact=page.locator('.fact-node').filter({hasText:'Utility Safety Permit: Needed'});
+  await safetyFact.locator('summary').click();
+  await expect(safetyFact.locator('.fact-reason')).toContainText('/utilityTrafficImpact');
+  await page.locator('#close-visualizer').click();
   await continueForm(page);
   await expect(page.locator('#notice')).toHaveClass(/hidden/);
   await expect(page.locator('#screen')).toContainText('Utility Safety Permit');
-  page.once('dialog', dialog => dialog.accept());
   await page.locator('#reset-application').click();
   await expect(page.locator('#screen')).toContainText('What work are you planning?');
   await expect(page.getByLabel('Build or maintain a utility')).not.toBeChecked();
