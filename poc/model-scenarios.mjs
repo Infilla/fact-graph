@@ -529,8 +529,10 @@ function capture(scenario, step, graph, paths) {
 // The browser must commit activity facts before consulting graph-derived activity predicates.
 {
   const name = '23 · Browser graph rebuild ordering';
-  const pass = /graphSet\('\/includesEntranceWork'[\s\S]*?graph\.save\(\);[\s\S]*?graphSet\('\/projectName'/.test(appSource);
-  checks.push({scenario:name,step:'activity layer transaction',path:'rebuildGraph()',expectedStatus:'saved before derived reads',expectedValue:true,actual:{status:pass?'saved before derived reads':'ordering regression',value:pass},pass});
+  const activityPass = /graphSet\('\/includesEntranceWork'[\s\S]*?graph\.save\(\);[\s\S]*?graphSet\('\/projectName'/.test(appSource);
+  checks.push({scenario:name,step:'activity layer transaction',path:'rebuildGraph()',expectedStatus:'saved before derived reads',expectedValue:true,actual:{status:activityPass?'saved before derived reads':'ordering regression',value:activityPass},pass:activityPass});
+  const sitePass = /graphSet\('\/entranceTaxParcelId'[\s\S]*?graph\.save\(\);[\s\S]*?const sites=/.test(appSource);
+  checks.push({scenario:name,step:'permit determination transaction',path:'rebuildGraph()',expectedStatus:'saved before site manifest',expectedValue:true,actual:{status:sitePass?'saved before site manifest':'ordering regression',value:sitePass},pass:sitePass});
 }
 
 // 24. Coordinates simulate an external GIS response once without replacing returned values.

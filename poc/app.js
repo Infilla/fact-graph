@@ -25,8 +25,9 @@ const emptyContact = () => ({ company:'', firstName:'', lastName:'', email:'', p
 const emptyGis = () => ({ stateMaintained:'', limitedAccess:'', airportAirspace:'', nearRailroad:'' });
 const emptyNode = (index) => ({ id:crypto.randomUUID(), label:`Node ${index}`, siteId:'', locationRelationship:'', address:'', latitude:'', longitude:'', county:'', scope:'', antennaVolume:'', equipmentVolume:'', poleHeight:'', facilityHeight:'', structureWork:'', poleOwner:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, majorTrafficImpact:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() });
 const emptyEntrance = () => ({ type:'', workType:'', planningApproval:'', adtEntering:'', adtExiting:'', peakHourTrips:'', priorUse:'', proposedUse:'', stakesDate:'', taxParcelId:'' });
-const defaultState = { activities:{utility:false,utilitySubtype:'',generalUtility:false,smallWireless:false,entrance:false}, applicationType:'', projectName:'', requestedNodeCount:'', contact:emptyContact(), utility:{ id:crypto.randomUUID(), publicUtility:'', utilityType:'', emergency:'', jurisdiction:'', address:'', latitude:'', longitude:'', county:'', disturbance:'', trafficImpact:'', duration:'', workType:'', description:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() }, entrance:emptyEntrance(), nodes:[], currentNode:0, documentComplete:{}, attestationAccepted:false, submitted:false };
-let state = JSON.parse(localStorage.getItem('deldot-poc') || 'null') || structuredClone(defaultState);
+const createDefaultState = () => ({ activities:{utility:false,utilitySubtype:'',generalUtility:false,smallWireless:false,entrance:false}, applicationType:'', projectName:'', requestedNodeCount:'', contact:emptyContact(), utility:{ id:crypto.randomUUID(), publicUtility:'', utilityType:'', emergency:'', jurisdiction:'', address:'', latitude:'', longitude:'', county:'', disturbance:'', trafficImpact:'', duration:'', workType:'', description:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() }, entrance:emptyEntrance(), nodes:[], currentNode:0, documentComplete:{}, attestationAccepted:false, submitted:false });
+const defaultState = createDefaultState();
+let state = JSON.parse(localStorage.getItem('deldot-poc') || 'null') || createDefaultState();
 state.utility=Object.assign({},defaultState.utility,state.utility);
 state.utility.gis=Object.assign(emptyGis(),state.utility.gis);
 state.entrance=Object.assign(emptyEntrance(),state.entrance);
@@ -137,6 +138,9 @@ function rebuildGraph(){
     graphSet('/entranceStakesDate',e.stakesDate);
     graphSet('/entranceTaxParcelId',e.taxParcelId);
   }
+  // Permit identity and question-manifest facts depend on the applicant facts
+  // above. Commit them before deciding which site records the graph needs.
+  graph.save();
   const sites=[...(needsGeneralUtilityApplication()||hasEntrance()?[state.utility]:[]),...(hasWireless()?state.nodes:[])];
   graph.set__T__O__V('/sites',FactGraph.CollectionFactory(sites.map(site=>site.id)));
   graph.save();
@@ -664,11 +668,13 @@ $('#gis-settings').addEventListener('change',(event)=>{
 $('#reset-application').addEventListener('click',()=>{
   if(!window.confirm('Reset this application? All locally saved answers and nodes will be removed.')) return;
   localStorage.removeItem('deldot-poc');
-  state=structuredClone(defaultState);
+  state=createDefaultState();
   step=0;
   previousVisualizerValues=new Map();
   $('.actions').classList.remove('hidden');
   setVisualizer(false);
+  $('#application-form').reset();
+  rebuildGraph();
   render();
   renderVisualizer();
 });
