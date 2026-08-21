@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const url = 'http://127.0.0.1:4173/poc/';
+const url = process.env.FACT_GRAPH_QA_URL || 'http://127.0.0.1:4173/poc/';
 
 async function continueForm(page) {
   await page.locator('#next').click();
