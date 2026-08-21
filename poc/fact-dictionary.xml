@@ -16,6 +16,8 @@
     <Fact path="/siteStructureWorkOptions"><Derived><EnumOptions><String>attach</String><String>replace</String><String>new</String></EnumOptions></Derived></Fact>
     <Fact path="/sitePoleOwnerOptions"><Derived><EnumOptions><String>utility</String><String>wip</String><String>deldot</String><String>other</String></EnumOptions></Derived></Fact>
     <Fact path="/utilityPermitIdentityOptions"><Derived><EnumOptions><String>construction</String><String>safety</String><String>emergency</String><String>none</String></EnumOptions></Derived></Fact>
+    <Fact path="/documentTypeOptions"><Derived><EnumOptions><String>agent</String><String>mluoa</String><String>utilityDrawing</String><String>utilityOccupancy</String><String>utilityTrafficControl</String><String>utilityFoundation</String><String>utilityCasing</String><String>utilityAirport</String><String>utilityRailroad</String><String>utilityRailroadProximity</String><String>entrancePlanning</String><String>entranceOwnership</String><String>entranceRecordedPlan</String><String>entranceConstruction</String><String>entranceCost</String><String>entranceSchedule</String><String>entranceTrafficAnalysis</String><String>entrancePedestrian</String></EnumOptions></Derived></Fact>
+    <Fact path="/nodeDocumentTypeOptions"><Derived><EnumOptions><String>constructionPlan</String><String>supportOwnerConsent</String><String>delDotAttachment</String><String>structuralCalculations</String><String>writtenRemoval</String><String>foundationDesign</String><String>arcFlash</String><String>casingSpecifications</String><String>airportForm</String><String>railroadApproval</String><String>railroadProximity</String><String>trafficControl</String></EnumOptions></Derived></Fact>
     <Fact path="/includesUtilityActivity"><Writable><Boolean/></Writable></Fact>
     <Fact path="/includesGeneralUtilityWork"><Writable><Boolean/></Writable></Fact>
     <Fact path="/includesSmallWirelessFacilities"><Writable><Boolean/></Writable></Fact>
@@ -38,8 +40,6 @@
     <Fact path="/contactPhone"><Writable><String/></Writable></Fact>
     <Fact path="/contactFilerType"><Writable><Enum optionsPath="/contactFilerTypeOptions"/></Writable></Fact>
     <Fact path="/isAuthorizedAgent"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/mlUoaAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/authorizedAgentFormAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/authorizedAgentFormRequired"><Derived><Dependency path="/isAuthorizedAgent"/></Derived></Fact>
     <Fact path="/authorizedAgentFormRequiredByUtility"><Derived><All><Dependency path="/authorizedAgentFormRequired"/><Dependency path="/generalUtilityApplicationRequired"/></All></Derived></Fact>
     <Fact path="/authorizedAgentFormRequiredByWireless"><Derived><All><Dependency path="/authorizedAgentFormRequired"/><Dependency path="/isSmallWirelessApplication"/></All></Derived></Fact>
@@ -49,18 +49,47 @@
     <Fact path="/mlUoaReason"><Derived><String>Small wireless facilities require a project-wide Master Limited Use &amp; Occupancy Agreement.</String></Derived></Fact>
     <Fact path="/authorizedAgentFormScope"><Derived><String>project</String></Derived></Fact>
     <Fact path="/mlUoaScope"><Derived><String>project</String></Derived></Fact>
-    <Fact path="/authorizedAgentRequirementSatisfied">
-      <Derived><Any>
-        <Not><Dependency path="/isAuthorizedAgent"/></Not>
-        <Dependency path="/authorizedAgentFormAttached"/>
-      </Any></Derived>
-    </Fact>
-    <Fact path="/projectDocumentsComplete">
-      <Derived><All>
-        <Dependency path="/authorizedAgentRequirementSatisfied"/>
-        <Any><Not><Dependency path="/isSmallWirelessApplication"/></Not><Dependency path="/mlUoaAttached"/></Any>
-      </All></Derived>
-    </Fact>
+    <Fact path="/documents"><Writable><Collection/></Writable></Fact>
+    <Fact path="/documents/*/type"><Writable><Enum optionsPath="/documentTypeOptions"/></Writable></Fact>
+    <Fact path="/documents/*/attached"><Writable><Boolean/></Writable></Fact>
+    <Fact path="/documents/*/isProjectScoped"><Derived><Any>
+      <Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">agent</Enum></Right></Equal>
+      <Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">mluoa</Enum></Right></Equal>
+    </Any></Derived></Fact>
+    <Fact path="/documents/*/requiredByUtility"><Derived><Any>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">agent</Enum></Right></Equal><Dependency path="/authorizedAgentFormRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityDrawing</Enum></Right></Equal><Dependency path="/utilityDrawingRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityOccupancy</Enum></Right></Equal><Dependency path="/utilityOccupancyAgreementRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityTrafficControl</Enum></Right></Equal><Dependency path="/utilityTrafficControlPlanRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityFoundation</Enum></Right></Equal><Dependency path="/utilityFoundationDesignRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityCasing</Enum></Right></Equal><Dependency path="/utilityCasingSpecificationsRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityAirport</Enum></Right></Equal><Dependency path="/utilityAirportFormRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityRailroad</Enum></Right></Equal><Dependency path="/utilityRailroadApprovalRequiredByUtility"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">utilityRailroadProximity</Enum></Right></Equal><Dependency path="/utilityRailroadProximityReviewRequiredByUtility"/></All>
+    </Any></Derived></Fact>
+    <Fact path="/documents/*/requiredByWireless"><Derived><Any>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">agent</Enum></Right></Equal><Dependency path="/authorizedAgentFormRequiredByWireless"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">mluoa</Enum></Right></Equal><Dependency path="/mlUoaRequiredByWireless"/></All>
+    </Any></Derived></Fact>
+    <Fact path="/documents/*/requiredByEntrance"><Derived><Any>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">agent</Enum></Right></Equal><Dependency path="/authorizedAgentFormRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entrancePlanning</Enum></Right></Equal><Dependency path="/entrancePlanningApprovalRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entranceOwnership</Enum></Right></Equal><Dependency path="/entranceOwnershipRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entranceRecordedPlan</Enum></Right></Equal><Dependency path="/entranceRecordedPlanRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entranceConstruction</Enum></Right></Equal><Dependency path="/entranceConstructionPlanRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entranceCost</Enum></Right></Equal><Dependency path="/entranceCostEstimateRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entranceSchedule</Enum></Right></Equal><Dependency path="/entranceScheduleRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entranceTrafficAnalysis</Enum></Right></Equal><Dependency path="/entranceTrafficAnalysisRequiredByEntrance"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/documentTypeOptions">entrancePedestrian</Enum></Right></Equal><Dependency path="/entrancePedestrianEvidenceRequiredByEntrance"/></All>
+    </Any></Derived></Fact>
+    <Fact path="/documents/*/required"><Derived><Any><Dependency path="../requiredByUtility"/><Dependency path="../requiredByWireless"/><Dependency path="../requiredByEntrance"/></Any></Derived></Fact>
+    <Fact path="/documents/*/requiredAndAttached"><Derived><All><Dependency path="../required"/><Dependency path="../attached"/></All></Derived></Fact>
+    <Fact path="/documents/*/projectRequired"><Derived><All><Dependency path="../isProjectScoped"/><Dependency path="../required"/></All></Derived></Fact>
+    <Fact path="/documents/*/projectRequiredAndAttached"><Derived><All><Dependency path="../projectRequired"/><Dependency path="../attached"/></All></Derived></Fact>
+    <Fact path="/projectDocumentsComplete"><Derived><Equal>
+      <Left><CollectionSize><Filter path="/documents"><Dependency path="projectRequiredAndAttached"/></Filter></CollectionSize></Left>
+      <Right><CollectionSize><Filter path="/documents"><Dependency path="projectRequired"/></Filter></CollectionSize></Right>
+    </Equal></Derived></Fact>
     <Fact path="/requestedWirelessNodeCount"><Writable><Int><Limit type="Min"><Int>1</Int></Limit><Limit type="Max"><Int>50</Int></Limit></Int></Writable></Fact>
     <Fact path="/sharedApplicationFactsComplete">
       <Derived><All>
@@ -194,24 +223,10 @@
     <Fact path="/utilityRailroadApprovalReason"><Derived><String>The proposed utility work crosses over or under a railroad.</String></Derived></Fact>
     <Fact path="/utilityRailroadProximityReason"><Derived><String>GIS identifies a railroad near the utility project site.</String></Derived></Fact>
     <Fact path="/utilityDocumentScope"><Derived><String>permit</String></Derived></Fact>
-    <Fact path="/utilityDrawingAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityOccupancyAgreementAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityTrafficControlPlanAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityFoundationDesignAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityCasingSpecificationsAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityAirportFormAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityRailroadApprovalAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityRailroadProximityReviewAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/utilityDocumentsComplete"><Derived><All>
-      <Dependency path="/utilityDrawingAttached"/>
-      <Any><Not><Dependency path="/utilityOccupancyAgreementRequired"/></Not><Dependency path="/utilityOccupancyAgreementAttached"/></Any>
-      <Any><Not><Dependency path="/utilityRequiresTrafficControlPlan"/></Not><Dependency path="/utilityTrafficControlPlanAttached"/></Any>
-      <Any><Not><Dependency path="/anySiteFoundationDesignRequired"/></Not><Dependency path="/utilityFoundationDesignAttached"/></Any>
-      <Any><Not><Dependency path="/anySiteCasingSpecificationsRequired"/></Not><Dependency path="/utilityCasingSpecificationsAttached"/></Any>
-      <Any><Not><Dependency path="/anySiteAirportFormRequired"/></Not><Dependency path="/utilityAirportFormAttached"/></Any>
-      <Any><Not><Dependency path="/anySiteRailroadApprovalRequired"/></Not><Dependency path="/utilityRailroadApprovalAttached"/></Any>
-      <Any><Not><Dependency path="/anySiteRailroadProximityReviewRequired"/></Not><Dependency path="/utilityRailroadProximityReviewAttached"/></Any>
-    </All></Derived></Fact>
+    <Fact path="/utilityDocumentsComplete"><Derived><Equal>
+      <Left><CollectionSize><Filter path="/documents"><All><Dependency path="requiredByUtility"/><Dependency path="attached"/></All></Filter></CollectionSize></Left>
+      <Right><CollectionSize><Filter path="/documents"><Dependency path="requiredByUtility"/></Filter></CollectionSize></Right>
+    </Equal></Derived></Fact>
 
     <!-- Entrance-permit facts consume the same project and site facts as utility rules. -->
     <Fact path="/entranceType"><Writable><Enum optionsPath="/entranceTypeOptions"/></Writable></Fact>
@@ -251,14 +266,6 @@
         <Dependency path="/allSitesGisJurisdictionEligible"/>
       </All>
     </Any></Derived></Fact>
-    <Fact path="/entrancePlanningApprovalAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entranceOwnershipAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entranceRecordedPlanAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entranceConstructionPlanAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entranceCostEstimateAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entranceScheduleAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entranceTrafficAnalysisAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/entrancePedestrianEvidenceAttached"><Writable><Boolean/></Writable></Fact>
     <Fact path="/entrancePlanningApprovalRequiredByEntrance"><Derived><Dependency path="/entrancePermitRequested"/></Derived></Fact>
     <Fact path="/entranceOwnershipRequiredByEntrance"><Derived><Dependency path="/entrancePermitRequested"/></Derived></Fact>
     <Fact path="/entranceRecordedPlanRequiredByEntrance"><Derived><Dependency path="/entrancePermitRequested"/></Derived></Fact>
@@ -282,16 +289,10 @@
     <Fact path="/entranceDocumentScope"><Derived><String>permit</String></Derived></Fact>
     <Fact path="/entranceDocumentsComplete"><Derived><Any>
       <Not><Dependency path="/entrancePermitRequested"/></Not>
-      <All>
-        <Dependency path="/entrancePlanningApprovalAttached"/>
-        <Dependency path="/entranceOwnershipAttached"/>
-        <Dependency path="/entranceRecordedPlanAttached"/>
-        <Dependency path="/entranceConstructionPlanAttached"/>
-        <Dependency path="/entranceCostEstimateAttached"/>
-        <Dependency path="/entranceScheduleAttached"/>
-        <Any><Not><Dependency path="/entranceTrafficOperationalAnalysisRequired"/></Not><Dependency path="/entranceTrafficAnalysisAttached"/></Any>
-        <Any><Not><Dependency path="/entrancePedestrianEvidenceRequired"/></Not><Dependency path="/entrancePedestrianEvidenceAttached"/></Any>
-      </All>
+      <Equal>
+        <Left><CollectionSize><Filter path="/documents"><All><Dependency path="requiredByEntrance"/><Dependency path="attached"/></All></Filter></CollectionSize></Left>
+        <Right><CollectionSize><Filter path="/documents"><Dependency path="requiredByEntrance"/></Filter></CollectionSize></Right>
+      </Equal>
     </Any></Derived></Fact>
     <Fact path="/entranceRequirementsSatisfied"><Derived><All><Dependency path="/entranceRequiredAnswersComplete"/><Dependency path="/entranceDocumentsComplete"/></All></Derived></Fact>
 
@@ -417,32 +418,28 @@
     <Fact path="/sites/*/railroadProximityReason"><Derived><String>GIS identifies a railroad near this node.</String></Derived></Fact>
     <Fact path="/sites/*/trafficControlPlanReason"><Derived><String>The node has traffic-control conditions that require a Traffic Control Plan.</String></Derived></Fact>
     <Fact path="/sites/*/wirelessDocumentScope"><Derived><String>node</String></Derived></Fact>
-    <Fact path="/sites/*/constructionPlanAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/supportOwnerConsentAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/delDotAttachmentAgreementAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/structuralCalculationsAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/writtenRemovalRequestAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/foundationDesignAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/arcFlashAnalysisAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/casingSpecificationsAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/airportFormAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/railroadApprovalAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/railroadProximityReviewAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/trafficControlPlanAttached"><Writable><Boolean/></Writable></Fact>
-    <Fact path="/sites/*/documentsComplete"><Derived><All>
-      <Dependency path="../constructionPlanAttached"/>
-      <Any><Not><Dependency path="../supportOwnerConsentRequired"/></Not><Dependency path="../supportOwnerConsentAttached"/></Any>
-      <Any><Not><Dependency path="../delDotAttachmentAgreementRequired"/></Not><Dependency path="../delDotAttachmentAgreementAttached"/></Any>
-      <Any><Not><Dependency path="../structuralCalculationsRequired"/></Not><Dependency path="../structuralCalculationsAttached"/></Any>
-      <Any><Not><Dependency path="../writtenRemovalRequestRequired"/></Not><Dependency path="../writtenRemovalRequestAttached"/></Any>
-      <Any><Not><Dependency path="../foundationDesignRequired"/></Not><Dependency path="../foundationDesignAttached"/></Any>
-      <Any><Not><Dependency path="../arcFlashAnalysisRequired"/></Not><Dependency path="../arcFlashAnalysisAttached"/></Any>
-      <Any><Not><Dependency path="../casingSpecificationsRequired"/></Not><Dependency path="../casingSpecificationsAttached"/></Any>
-      <Any><Not><Dependency path="../airportFormRequired"/></Not><Dependency path="../airportFormAttached"/></Any>
-      <Any><Not><Dependency path="../railroadApprovalRequired"/></Not><Dependency path="../railroadApprovalAttached"/></Any>
-      <Any><Not><Dependency path="../railroadProximityReviewRequired"/></Not><Dependency path="../railroadProximityReviewAttached"/></Any>
-      <Any><Not><Dependency path="../requiresTrafficControlPlan"/></Not><Dependency path="../trafficControlPlanAttached"/></Any>
-    </All></Derived></Fact>
+    <Fact path="/sites/*/documents"><Writable><Collection/></Writable></Fact>
+    <Fact path="/sites/*/documents/*/type"><Writable><Enum optionsPath="/nodeDocumentTypeOptions"/></Writable></Fact>
+    <Fact path="/sites/*/documents/*/attached"><Writable><Boolean/></Writable></Fact>
+    <Fact path="/sites/*/documents/*/required"><Derived><Any>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">constructionPlan</Enum></Right></Equal><Dependency path="../../../constructionPlanRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">supportOwnerConsent</Enum></Right></Equal><Dependency path="../../../supportOwnerConsentRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">delDotAttachment</Enum></Right></Equal><Dependency path="../../../delDotAttachmentAgreementRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">structuralCalculations</Enum></Right></Equal><Dependency path="../../../structuralCalculationsRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">writtenRemoval</Enum></Right></Equal><Dependency path="../../../writtenRemovalRequestRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">foundationDesign</Enum></Right></Equal><Dependency path="../../../foundationDesignRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">arcFlash</Enum></Right></Equal><Dependency path="../../../arcFlashAnalysisRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">casingSpecifications</Enum></Right></Equal><Dependency path="../../../casingSpecificationsRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">airportForm</Enum></Right></Equal><Dependency path="../../../airportFormRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">railroadApproval</Enum></Right></Equal><Dependency path="../../../railroadApprovalRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">railroadProximity</Enum></Right></Equal><Dependency path="../../../railroadProximityReviewRequired"/></All>
+      <All><Equal><Left><Dependency path="../type"/></Left><Right><Enum optionsPath="/nodeDocumentTypeOptions">trafficControl</Enum></Right></Equal><Dependency path="../../../requiresTrafficControlPlan"/></All>
+    </Any></Derived></Fact>
+    <Fact path="/sites/*/documents/*/requiredAndAttached"><Derived><All><Dependency path="../required"/><Dependency path="../attached"/></All></Derived></Fact>
+    <Fact path="/sites/*/documentsComplete"><Derived><Equal>
+      <Left><CollectionSize><Filter path="../documents"><Dependency path="requiredAndAttached"/></Filter></CollectionSize></Left>
+      <Right><CollectionSize><Filter path="../documents"><Dependency path="required"/></Filter></CollectionSize></Right>
+    </Equal></Derived></Fact>
     <Fact path="/sites/*/readyToSubmit">
       <Derived><All>
         <Dependency path="../requiredAnswersComplete"/>

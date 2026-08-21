@@ -14,12 +14,28 @@ const enumPaths = {
   '/utilityJurisdiction':'/utilityJurisdictionOptions','/utilityTrafficImpact':'/utilityTrafficImpactOptions','/utilityDuration':'/utilityDurationOptions',
   '/entranceType':'/entranceTypeOptions','/entranceWorkType':'/entranceWorkTypeOptions',scope:'/siteScopeOptions',structureWork:'/siteStructureWorkOptions',poleOwner:'/sitePoleOwnerOptions'
 };
+const rootDocumentTypes = [
+  ['agent','/authorizedAgentFormAttached'],['mluoa','/mlUoaAttached'],['utilityDrawing','/utilityDrawingAttached'],['utilityOccupancy','/utilityOccupancyAgreementAttached'],
+  ['utilityTrafficControl','/utilityTrafficControlPlanAttached'],['utilityFoundation','/utilityFoundationDesignAttached'],['utilityCasing','/utilityCasingSpecificationsAttached'],
+  ['utilityAirport','/utilityAirportFormAttached'],['utilityRailroad','/utilityRailroadApprovalAttached'],['utilityRailroadProximity','/utilityRailroadProximityReviewAttached'],
+  ['entrancePlanning','/entrancePlanningApprovalAttached'],['entranceOwnership','/entranceOwnershipAttached'],['entranceRecordedPlan','/entranceRecordedPlanAttached'],
+  ['entranceConstruction','/entranceConstructionPlanAttached'],['entranceCost','/entranceCostEstimateAttached'],['entranceSchedule','/entranceScheduleAttached'],
+  ['entranceTrafficAnalysis','/entranceTrafficAnalysisAttached'],['entrancePedestrian','/entrancePedestrianEvidenceAttached']
+];
+const nodeDocumentTypes = [
+  ['constructionPlan','constructionPlanAttached'],['supportOwnerConsent','supportOwnerConsentAttached'],['delDotAttachment','delDotAttachmentAgreementAttached'],
+  ['structuralCalculations','structuralCalculationsAttached'],['writtenRemoval','writtenRemovalRequestAttached'],['foundationDesign','foundationDesignAttached'],
+  ['arcFlash','arcFlashAnalysisAttached'],['casingSpecifications','casingSpecificationsAttached'],['airportForm','airportFormAttached'],
+  ['railroadApproval','railroadApprovalAttached'],['railroadProximity','railroadProximityReviewAttached'],['trafficControl','trafficControlPlanAttached']
+];
+const documentInstances = new WeakMap();
 
 const normalize = value => value && typeof value === 'object' && value.toString__T
   ? value.toString__T()
   : value;
 
 function read(graph, path) {
+  path=documentInstances.get(graph)?.get(path)||path;
   try {
     const result = graph.get(path);
     const status = result.productPrefix__T();
@@ -35,15 +51,41 @@ function read(graph, path) {
 function makeGraph(siteCount = 0) {
   const graph = FactGraph.GraphFactory.apply(dictionary);
   graph.set__T__O__V('/includesGeneralUtilityWork', false); graph.set__T__O__V('/includesSmallWirelessFacilities', false); graph.set__T__O__V('/includesEntranceWork', false);
+  const legacyPaths = new Map();
+  const rootIds = rootDocumentTypes.map(() => crypto.randomUUID());
+  graph.set__T__O__V('/documents', FactGraph.CollectionFactory(rootIds));
+  graph.save();
+  rootDocumentTypes.forEach(([type,legacyPath],index)=>{
+    const path=`/documents/#${rootIds[index]}`;
+    graph.set__T__O__V(`${path}/type`,FactGraph.EnumFactory(type,'/documentTypeOptions').right);
+    graph.set__T__O__V(`${path}/attached`,false);
+    legacyPaths.set(legacyPath,`${path}/attached`);
+    if(type==='agent') legacyPaths.set('/authorizedAgentRequirementSatisfied',`${path}/requiredAndAttached`);
+  });
+  graph.save();
   const ids = Array.from({ length: siteCount }, () => crypto.randomUUID());
   if (siteCount) {
     graph.set__T__O__V('/sites', FactGraph.CollectionFactory(ids));
     graph.save();
+    ids.forEach(id=>{
+      const documentIds=nodeDocumentTypes.map(()=>crypto.randomUUID());
+      graph.set__T__O__V(sitePath(id,'documents'),FactGraph.CollectionFactory(documentIds));
+      graph.save();
+      nodeDocumentTypes.forEach(([type,legacyName],index)=>{
+        const path=`${sitePath(id,'documents')}/#${documentIds[index]}`;
+        graph.set__T__O__V(`${path}/type`,FactGraph.EnumFactory(type,'/nodeDocumentTypeOptions').right);
+        graph.set__T__O__V(`${path}/attached`,false);
+        legacyPaths.set(sitePath(id,legacyName),`${path}/attached`);
+      });
+      graph.save();
+    });
   }
+  documentInstances.set(graph,legacyPaths);
   return { graph, ids };
 }
 
 function set(graph, path, value) {
+  path=documentInstances.get(graph)?.get(path)||path;
   if (/\/(largestAntennaVolume|otherEquipmentVolume|poleHeight|facilityHeight)$/.test(path) && typeof value === 'number') {
     const decimals=(String(value).split('.')[1]||'').length;
     const denominator=10**decimals;
@@ -560,6 +602,24 @@ function capture(scenario, step, graph, paths) {
   for (const path of new Set(diagramPaths)) {
     const pass = dictionaryPaths.has(path);
     checks.push({scenario:name,step:'diagram source scan',path,expectedStatus:'declared',expectedValue:true,actual:{status:pass?'declared':'missing',value:pass},pass});
+  }
+}
+
+// 26. Attachments are collection-item facts, not one writable fact per document kind.
+{
+  const name = '26 · Documents modeled as collections';
+  const { graph } = makeGraph();
+  const declaredPaths = new Set(Array.from(graph.paths()));
+  const attachmentWritables = [...xml.matchAll(/<Fact path="([^"]*\/attached)"><Writable><Boolean\/><\/Writable><\/Fact>/g)].map(match=>match[1]);
+  const expected = ['/documents/*/attached','/sites/*/documents/*/attached'];
+  const pass = JSON.stringify(attachmentWritables) === JSON.stringify(expected);
+  checks.push({scenario:name,step:'attachment fact templates',path:'/documents',expectedStatus:'two collection templates',expectedValue:expected,actual:{status:pass?'two collection templates':'named attachment facts remain',value:attachmentWritables},pass});
+  const namedAttachments = [...xml.matchAll(/<Fact path="([^"]*Attached)"><Writable/g)].map(match=>match[1]);
+  const noneRemain = namedAttachments.length === 0;
+  checks.push({scenario:name,step:'legacy attachment scan',path:'*Attached',expectedStatus:'none',expectedValue:[],actual:{status:noneRemain?'none':'legacy facts remain',value:namedAttachments},pass:noneRemain});
+  for(const path of ['/documents','/documents/*/required','/projectDocumentsComplete','/utilityDocumentsComplete','/entranceDocumentsComplete','/sites/*/documents','/sites/*/documents/*/required','/sites/*/documentsComplete']){
+    const declared=declaredPaths.has(path);
+    checks.push({scenario:name,step:'collection model path',path,expectedStatus:'declared',expectedValue:true,actual:{status:declared?'declared':'missing',value:declared},pass:declared});
   }
 }
 

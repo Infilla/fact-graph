@@ -25,7 +25,7 @@ const emptyContact = () => ({ company:'', firstName:'', lastName:'', email:'', p
 const emptyGis = () => ({ stateMaintained:'', limitedAccess:'', airportAirspace:'', nearRailroad:'' });
 const emptyNode = (index) => ({ id:crypto.randomUUID(), label:`Node ${index}`, siteId:'', locationRelationship:'', address:'', latitude:'', longitude:'', county:'', scope:'', antennaVolume:'', equipmentVolume:'', poleHeight:'', facilityHeight:'', structureWork:'', poleOwner:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, majorTrafficImpact:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() });
 const emptyEntrance = () => ({ type:'', workType:'', planningApproval:'', adtEntering:'', adtExiting:'', peakHourTrips:'', priorUse:'', proposedUse:'', stakesDate:'', taxParcelId:'' });
-const createDefaultState = () => ({ activities:{utility:false,utilitySubtype:'',generalUtility:false,smallWireless:false,entrance:false}, applicationType:'', projectName:'', requestedNodeCount:'', contact:emptyContact(), utility:{ id:crypto.randomUUID(), publicUtility:'', utilityType:'', emergency:'', jurisdiction:'', address:'', latitude:'', longitude:'', county:'', disturbance:'', trafficImpact:'', duration:'', workType:'', description:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() }, entrance:emptyEntrance(), nodes:[], currentNode:0, documentComplete:{}, attestationAccepted:false, submitted:false });
+const createDefaultState = () => ({ activities:{utility:false,utilitySubtype:'',generalUtility:false,smallWireless:false,entrance:false}, applicationType:'', projectName:'', requestedNodeCount:'', contact:emptyContact(), utility:{ id:crypto.randomUUID(), publicUtility:'', utilityType:'', emergency:'', jurisdiction:'', address:'', latitude:'', longitude:'', county:'', disturbance:'', trafficImpact:'', duration:'', workType:'', description:'', foundations:null, underground:null, undergroundOwnerMemberId:'', pavement:null, electrical:null, casing:null, railroad:null, detour:null, complexConditions:null, pedestrianImpact:null, travelLaneOccupation:null, taCount:'', gis:emptyGis() }, entrance:emptyEntrance(), nodes:[], currentNode:0, documentComplete:{}, documentIds:{}, attestationAccepted:false, submitted:false });
 const defaultState = createDefaultState();
 let state = JSON.parse(localStorage.getItem('deldot-poc') || 'null') || createDefaultState();
 state.utility=Object.assign({},defaultState.utility,state.utility);
@@ -37,6 +37,7 @@ if(state.activities.generalUtility||state.activities.smallWireless){ state.activ
 state.nodes=state.nodes.map((node,index)=>({...emptyNode(index+1),...node,gis:{...emptyGis(),...node.gis}}));
 if (state.requestedNodeCount === undefined) state.requestedNodeCount = state.nodes.length || '';
 state.documentComplete ||= {};
+state.documentIds ||= {};
 state.attestationAccepted ||= false;
 if(Object.entries(state.documentComplete).some(([key,complete])=>complete&&key.endsWith(':Authorized agent form'))) state.documentComplete['project:Authorized agent form']=true;
 if(Object.entries(state.documentComplete).some(([key,complete])=>complete&&key.endsWith(':Master Limited Use & Occupancy Agreement (MLUOA)'))) state.documentComplete['project:Master Limited Use & Occupancy Agreement (MLUOA)']=true;
@@ -70,6 +71,8 @@ const graphSet = (path, value, type='string') => {
   if(enumOptionsPath) typed=FactGraph.EnumFactory(String(value),enumOptionsPath).right;
   graph.set__T__O__V(path, typed);
 };
+const graphSetEnum = (path, value, optionsPath) => graph.set__T__O__V(path, FactGraph.EnumFactory(String(value),optionsPath).right);
+const documentId = key => state.documentIds[key] ||= crypto.randomUUID();
 const graphResult = path => {
   try{
     const result = graph.get(path);
@@ -160,9 +163,28 @@ function rebuildGraph(){
     [['gisIsStateMaintainedRoad',gis.stateMaintained],['gisIsLimitedAccessRoad',gis.limitedAccess],['gisIsInAirportAirspace',gis.airportAirspace],['gisIsNearRailroad',gis.nearRailroad]].forEach(([name,value])=>{ if(value!=='') graphSet(`${p}/${name}`,value==='true','boolean'); });
   });
   graph.save();
-  graphSet('/mlUoaAttached',Boolean(state.documentComplete['project:Master Limited Use & Occupancy Agreement (MLUOA)']),'boolean');
-  graphSet('/authorizedAgentFormAttached',Boolean(state.documentComplete['project:Authorized agent form']),'boolean');
-  graphDocumentRecords().filter(record=>record.scope!=='project').forEach(record=>graphSet(record.attached,Boolean(state.documentComplete[record.key]),'boolean'));
+  const rootDocumentIds=documentCatalog.map(document=>documentId(`root:${document.type}`));
+  graph.set__T__O__V('/documents',FactGraph.CollectionFactory(rootDocumentIds));
+  graph.save();
+  documentCatalog.forEach((document,index)=>{
+    const path=`/documents/#${rootDocumentIds[index]}`;
+    graphSetEnum(`${path}/type`,document.type,'/documentTypeOptions');
+    const key=document.domain==='project'?`project:${document.label}`:`${document.domain}:application:${document.label}`;
+    graphSet(`${path}/attached`,Boolean(state.documentComplete[key]),'boolean');
+  });
+  graph.save();
+  state.nodes.forEach(node=>{
+    const sitePath=`/sites/#${node.id}`;
+    const ids=nodeDocumentCatalog.map(document=>documentId(`node:${node.id}:${document.type}`));
+    graph.set__T__O__V(`${sitePath}/documents`,FactGraph.CollectionFactory(ids));
+    graph.save();
+    nodeDocumentCatalog.forEach((document,index)=>{
+      const path=`${sitePath}/documents/#${ids[index]}`;
+      graphSetEnum(`${path}/type`,document.type,'/nodeDocumentTypeOptions');
+      graphSet(`${path}/attached`,Boolean(state.documentComplete[`wireless:${node.id}:${document.label}`]),'boolean');
+    });
+    graph.save();
+  });
   graph.save();
 }
 const facts = () => {
@@ -175,46 +197,47 @@ const facts = () => {
 };
 
 const documentCatalog = [
-  {label:'Authorized agent form',scope:'/authorizedAgentFormScope',attached:'/authorizedAgentFormAttached',reason:'/authorizedAgentFormReason',consumers:{utility:'/authorizedAgentFormRequiredByUtility',wireless:'/authorizedAgentFormRequiredByWireless',entrance:'/authorizedAgentFormRequiredByEntrance'}},
-  {label:'Master Limited Use & Occupancy Agreement (MLUOA)',scope:'/mlUoaScope',attached:'/mlUoaAttached',reason:'/mlUoaReason',consumers:{wireless:'/mlUoaRequiredByWireless'}},
-  {label:'Drawing / construction plans',scope:'/utilityDocumentScope',attached:'/utilityDrawingAttached',reason:'/utilityDrawingReason',consumers:{utility:'/utilityDrawingRequiredByUtility'}},
-  {label:'Use & Occupancy Agreement',scope:'/utilityDocumentScope',attached:'/utilityOccupancyAgreementAttached',reason:'/utilityOccupancyAgreementReason',consumers:{utility:'/utilityOccupancyAgreementRequiredByUtility'}},
-  {label:'Traffic Control Plan',scope:'/utilityDocumentScope',attached:'/utilityTrafficControlPlanAttached',reason:'/utilityTrafficControlPlanReason',consumers:{utility:'/utilityTrafficControlPlanRequiredByUtility'}},
-  {label:'Pole foundation designs',scope:'/utilityDocumentScope',attached:'/utilityFoundationDesignAttached',reason:'/utilityFoundationDesignReason',consumers:{utility:'/utilityFoundationDesignRequiredByUtility'}},
-  {label:'Casing specifications',scope:'/utilityDocumentScope',attached:'/utilityCasingSpecificationsAttached',reason:'/utilityCasingSpecificationsReason',consumers:{utility:'/utilityCasingSpecificationsRequiredByUtility'}},
-  {label:'Airport Zone Notification Form',scope:'/utilityDocumentScope',attached:'/utilityAirportFormAttached',reason:'/utilityAirportFormReason',consumers:{utility:'/utilityAirportFormRequiredByUtility'}},
-  {label:'Railroad company approval',scope:'/utilityDocumentScope',attached:'/utilityRailroadApprovalAttached',reason:'/utilityRailroadApprovalReason',consumers:{utility:'/utilityRailroadApprovalRequiredByUtility'}},
-  {label:'Railroad proximity review information',scope:'/utilityDocumentScope',attached:'/utilityRailroadProximityReviewAttached',reason:'/utilityRailroadProximityReason',consumers:{utility:'/utilityRailroadProximityReviewRequiredByUtility'}},
-  {label:'Planning and zoning approval',scope:'/entranceDocumentScope',attached:'/entrancePlanningApprovalAttached',reason:'/entrancePlanningApprovalReason',consumers:{entrance:'/entrancePlanningApprovalRequiredByEntrance'}},
-  {label:'Proof of property ownership',scope:'/entranceDocumentScope',attached:'/entranceOwnershipAttached',reason:'/entranceOwnershipReason',consumers:{entrance:'/entranceOwnershipRequiredByEntrance'}},
-  {label:'Recorded plan or subdivision plan',scope:'/entranceDocumentScope',attached:'/entranceRecordedPlanAttached',reason:'/entranceRecordedPlanReason',consumers:{entrance:'/entranceRecordedPlanRequiredByEntrance'}},
-  {label:'Entrance construction plan',scope:'/entranceDocumentScope',attached:'/entranceConstructionPlanAttached',reason:'/entranceConstructionPlanReason',consumers:{entrance:'/entranceConstructionPlanRequiredByEntrance'}},
-  {label:'Construction cost estimate',scope:'/entranceDocumentScope',attached:'/entranceCostEstimateAttached',reason:'/entranceCostEstimateReason',consumers:{entrance:'/entranceCostEstimateRequiredByEntrance'}},
-  {label:'Construction schedule',scope:'/entranceDocumentScope',attached:'/entranceScheduleAttached',reason:'/entranceScheduleReason',consumers:{entrance:'/entranceScheduleRequiredByEntrance'}},
-  {label:'Traffic Operational Analysis',scope:'/entranceDocumentScope',attached:'/entranceTrafficAnalysisAttached',reason:'/entranceTrafficAnalysisReason',consumers:{entrance:'/entranceTrafficAnalysisRequiredByEntrance'}},
-  {label:'Pedestrian access evidence',scope:'/entranceDocumentScope',attached:'/entrancePedestrianEvidenceAttached',reason:'/entrancePedestrianEvidenceReason',consumers:{entrance:'/entrancePedestrianEvidenceRequiredByEntrance'}}
+  {type:'agent',label:'Authorized agent form',domain:'project',reason:'/authorizedAgentFormReason'},
+  {type:'mluoa',label:'Master Limited Use & Occupancy Agreement (MLUOA)',domain:'project',reason:'/mlUoaReason'},
+  {type:'utilityDrawing',label:'Drawing / construction plans',domain:'utility',reason:'/utilityDrawingReason'},
+  {type:'utilityOccupancy',label:'Use & Occupancy Agreement',domain:'utility',reason:'/utilityOccupancyAgreementReason'},
+  {type:'utilityTrafficControl',label:'Traffic Control Plan',domain:'utility',reason:'/utilityTrafficControlPlanReason'},
+  {type:'utilityFoundation',label:'Pole foundation designs',domain:'utility',reason:'/utilityFoundationDesignReason'},
+  {type:'utilityCasing',label:'Casing specifications',domain:'utility',reason:'/utilityCasingSpecificationsReason'},
+  {type:'utilityAirport',label:'Airport Zone Notification Form',domain:'utility',reason:'/utilityAirportFormReason'},
+  {type:'utilityRailroad',label:'Railroad company approval',domain:'utility',reason:'/utilityRailroadApprovalReason'},
+  {type:'utilityRailroadProximity',label:'Railroad proximity review information',domain:'utility',reason:'/utilityRailroadProximityReason'},
+  {type:'entrancePlanning',label:'Planning and zoning approval',domain:'entrance',reason:'/entrancePlanningApprovalReason'},
+  {type:'entranceOwnership',label:'Proof of property ownership',domain:'entrance',reason:'/entranceOwnershipReason'},
+  {type:'entranceRecordedPlan',label:'Recorded plan or subdivision plan',domain:'entrance',reason:'/entranceRecordedPlanReason'},
+  {type:'entranceConstruction',label:'Entrance construction plan',domain:'entrance',reason:'/entranceConstructionPlanReason'},
+  {type:'entranceCost',label:'Construction cost estimate',domain:'entrance',reason:'/entranceCostEstimateReason'},
+  {type:'entranceSchedule',label:'Construction schedule',domain:'entrance',reason:'/entranceScheduleReason'},
+  {type:'entranceTrafficAnalysis',label:'Traffic Operational Analysis',domain:'entrance',reason:'/entranceTrafficAnalysisReason'},
+  {type:'entrancePedestrian',label:'Pedestrian access evidence',domain:'entrance',reason:'/entrancePedestrianEvidenceReason'}
 ];
 const nodeDocumentCatalog=[
-  {label:'Construction plan set',required:'constructionPlanRequired',attached:'constructionPlanAttached',reason:'constructionPlanReason'},
-  {label:'Support structure owner consent',required:'supportOwnerConsentRequired',attached:'supportOwnerConsentAttached',reason:'supportOwnerConsentReason'},
-  {label:'DelDOT attachment agreement',required:'delDotAttachmentAgreementRequired',attached:'delDotAttachmentAgreementAttached',reason:'delDotAttachmentAgreementReason'},
-  {label:'Structural calculations',required:'structuralCalculationsRequired',attached:'structuralCalculationsAttached',reason:'structuralCalculationsReason'},
-  {label:'Written Request to Remove DelDOT Structure',required:'writtenRemovalRequestRequired',attached:'writtenRemovalRequestAttached',reason:'writtenRemovalRequestReason'},
-  {label:'Pole foundation designs',required:'foundationDesignRequired',attached:'foundationDesignAttached',reason:'foundationDesignReason'},
-  {label:'Arc Flash Hazard Analysis',required:'arcFlashAnalysisRequired',attached:'arcFlashAnalysisAttached',reason:'arcFlashAnalysisReason'},
-  {label:'Casing specifications',required:'casingSpecificationsRequired',attached:'casingSpecificationsAttached',reason:'casingSpecificationsReason'},
-  {label:'Airport Zone Notification Form',required:'airportFormRequired',attached:'airportFormAttached',reason:'airportFormReason'},
-  {label:'Railroad company approval',required:'railroadApprovalRequired',attached:'railroadApprovalAttached',reason:'railroadApprovalReason'},
-  {label:'Railroad proximity review information',required:'railroadProximityReviewRequired',attached:'railroadProximityReviewAttached',reason:'railroadProximityReason'},
-  {label:'Traffic Control Plan',required:'requiresTrafficControlPlan',attached:'trafficControlPlanAttached',reason:'trafficControlPlanReason'}
+  {type:'constructionPlan',label:'Construction plan set',reason:'constructionPlanReason'},
+  {type:'supportOwnerConsent',label:'Support structure owner consent',reason:'supportOwnerConsentReason'},
+  {type:'delDotAttachment',label:'DelDOT attachment agreement',reason:'delDotAttachmentAgreementReason'},
+  {type:'structuralCalculations',label:'Structural calculations',reason:'structuralCalculationsReason'},
+  {type:'writtenRemoval',label:'Written Request to Remove DelDOT Structure',reason:'writtenRemovalRequestReason'},
+  {type:'foundationDesign',label:'Pole foundation designs',reason:'foundationDesignReason'},
+  {type:'arcFlash',label:'Arc Flash Hazard Analysis',reason:'arcFlashAnalysisReason'},
+  {type:'casingSpecifications',label:'Casing specifications',reason:'casingSpecificationsReason'},
+  {type:'airportForm',label:'Airport Zone Notification Form',reason:'airportFormReason'},
+  {type:'railroadApproval',label:'Railroad company approval',reason:'railroadApprovalReason'},
+  {type:'railroadProximity',label:'Railroad proximity review information',reason:'railroadProximityReason'},
+  {type:'trafficControl',label:'Traffic Control Plan',reason:'trafficControlPlanReason'}
 ];
 function graphDocumentRecords(){
   const records=documentCatalog.map(definition=>{
-    const requiredBy=Object.entries(definition.consumers).filter(([,path])=>graphBoolean(path)).map(([permit])=>permit);
-    const scope=graphResult(definition.scope);
-    return {...definition,scope,requiredBy,key:scope==='project'?`project:${definition.label}`:`${requiredBy[0]}:application:${definition.label}`};
+    const id=documentId(`root:${definition.type}`), path=`/documents/#${id}`;
+    const requiredBy=['utility','wireless','entrance'].filter(permit=>graphBoolean(`${path}/requiredBy${permit[0].toUpperCase()}${permit.slice(1)}`));
+    const scope=graphBoolean(`${path}/isProjectScoped`)?'project':'permit';
+    return {...definition,path,scope,requiredBy,key:scope==='project'?`project:${definition.label}`:`${definition.domain}:application:${definition.label}`,attached:`${path}/attached`,triggerPaths:[`${path}/required`]};
   }).filter(record=>record.requiredBy.length);
-  if(hasWireless()) state.nodes.forEach((node,index)=>nodeDocumentCatalog.filter(document=>graphBoolean(`/sites/#${node.id}/${document.required}`)).forEach(document=>records.push({label:document.label,scope:graphResult(`/sites/#${node.id}/wirelessDocumentScope`),requiredBy:['wireless'],node,index,key:`wireless:${node.id}:${document.label}`,attached:`/sites/#${node.id}/${document.attached}`,reason:`/sites/#${node.id}/${document.reason}`,triggerPaths:[`/sites/#${node.id}/${document.required}`]})));
+  if(hasWireless()) state.nodes.forEach((node,index)=>nodeDocumentCatalog.forEach(document=>{ const id=documentId(`node:${node.id}:${document.type}`), path=`/sites/#${node.id}/documents/#${id}`; if(graphBoolean(`${path}/required`)) records.push({...document,path,scope:'node',requiredBy:['wireless'],node,index,key:`wireless:${node.id}:${document.label}`,attached:`${path}/attached`,reason:`/sites/#${node.id}/${document.reason}`,triggerPaths:[`${path}/required`]}); }));
   return records;
 }
 rebuildGraph();

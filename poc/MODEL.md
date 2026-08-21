@@ -40,7 +40,7 @@ Application package (project)
 
 The package is the user-facing draft and checkout unit. Each wireless node remains a separate application record for eligibility, documents, review, identifiers, and transmission to EUS.
 
-Documents have an explicit scope. Project documents, such as the Authorized Agent Form, describe a shared relationship and are required once. Node documents describe site-specific work and are required independently for each node. Document totals are therefore `project-wide documents + the sum of each completed node’s documents`, not `one checklist × node count`.
+Documents are collection records rather than one fact per upload type. `/documents` contains project- and permit-scoped records; every wireless site has its own `/sites/*/documents` collection. Each record has a typed document kind, one writable `attached` fact, and graph-derived scope, permit consumers, and `required` status. Completion compares the count of required records with the count of required-and-attached records. Project documents, such as the Authorized Agent Form, are therefore uploaded once, while node documents are independently required for each node.
 
 The entrance is project-scoped, not node-scoped. The applicant supplies every wireless node first, then one entrance fact set. A node at the entrance/project site sets `/sites/*/usesProjectSiteLocation = true`; its effective address, county, latitude, longitude, and GIS facts are reused from that site. Only a node at a different location asks for another complete location record.
 
