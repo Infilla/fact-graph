@@ -26,6 +26,7 @@ Open **Fact Graph** and use **Simulated GIS source** to change external facts fo
 - Other utility work can produce one Construction, Safety, or After-the-Fact Emergency permit and has no application fee.
 - Entrance work produces one Entrance Permit and has no application fee.
 - A small wireless project declares its node count up front and owns a collection of **nodes**. Each node is an independently evaluated permit application and adds `$100` to the package total.
+- Documents are durable records in `/documents` and `/sites/*/documents` collections. The graph derives which records are required and which permits consume them; only each record's `attached` fact is supplied by an upload.
 - Eligibility, document requirements, attestations, and fees are derived facts rather than duplicated page logic.
 - `fact-dictionary.xml` expresses the executable model using Fact Graph 3.1 primitives. `app.js` loads the real compiled engine, writes source facts, and projects graph results into applicant-facing screens.
 

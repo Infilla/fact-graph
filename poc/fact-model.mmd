@@ -161,6 +161,50 @@ flowchart LR
   PED --> TCP
   LANE --> TCP
 
+  DOCS["/documents"]:::supplied
+  DOC_TYPE["/documents/*/type"]:::supplied
+  DOC_ATTACHED["/documents/*/attached"]:::supplied
+  DOC_UTILITY["/documents/*/requiredByUtility"]:::derived
+  DOC_WIRELESS["/documents/*/requiredByWireless"]:::derived
+  DOC_ENTRANCE["/documents/*/requiredByEntrance"]:::derived
+  DOC_REQUIRED["/documents/*/required"]:::derived
+  PROJECT_DOCS["/projectDocumentsComplete"]:::completion
+  UTILITY_DOCS["/utilityDocumentsComplete"]:::completion
+  ENTRANCE_DOCS["/entranceDocumentsComplete"]:::completion
+  NODE_DOC_COLLECTION["/sites/*/documents"]:::supplied
+  NODE_DOC_TYPE["/sites/*/documents/*/type"]:::supplied
+  NODE_DOC_ATTACHED["/sites/*/documents/*/attached"]:::supplied
+  NODE_DOC_REQUIRED["/sites/*/documents/*/required"]:::derived
+
+  DOCS --> DOC_TYPE
+  DOC_TYPE --> DOC_UTILITY
+  DOC_TYPE --> DOC_WIRELESS
+  DOC_TYPE --> DOC_ENTRANCE
+  GU_REQUIRED --> DOC_UTILITY
+  SW_NEEDED --> DOC_WIRELESS
+  EN_NEEDED --> DOC_ENTRANCE
+  DOC_UTILITY --> DOC_REQUIRED
+  DOC_WIRELESS --> DOC_REQUIRED
+  DOC_ENTRANCE --> DOC_REQUIRED
+  DOC_REQUIRED --> PROJECT_DOCS
+  DOC_ATTACHED --> PROJECT_DOCS
+  DOC_UTILITY --> UTILITY_DOCS
+  DOC_ATTACHED --> UTILITY_DOCS
+  DOC_ENTRANCE --> ENTRANCE_DOCS
+  DOC_ATTACHED --> ENTRANCE_DOCS
+  NODE_DOC_COLLECTION --> NODE_DOC_TYPE
+  NODE_DOC_TYPE --> NODE_DOC_REQUIRED
+  OWNER_DOC --> NODE_DOC_REQUIRED
+  DELDOT_DOC --> NODE_DOC_REQUIRED
+  FOUNDATION_DOC --> NODE_DOC_REQUIRED
+  CASING_DOC --> NODE_DOC_REQUIRED
+  ARC_DOC --> NODE_DOC_REQUIRED
+  AIR_DOC --> NODE_DOC_REQUIRED
+  RAIL_DOC --> NODE_DOC_REQUIRED
+  TCP --> NODE_DOC_REQUIRED
+  NODE_DOC_REQUIRED --> NODE_DOCS
+  NODE_DOC_ATTACHED --> NODE_DOCS
+
   NODE_ANS["/sites/*/requiredAnswersComplete"]:::completion
   NODE_DOCS["/sites/*/documentsComplete"]:::completion
   NODE_READY["/sites/*/readyToSubmit"]:::completion
@@ -169,7 +213,6 @@ flowchart LR
   GU_DONE["/generalUtilityRequirementsSatisfied"]:::completion
   EN_DONE["/entranceRequirementsSatisfied"]:::completion
   SHARED_DONE["/sharedApplicationFactsComplete"]:::completion
-  PROJECT_DOCS["/projectDocumentsComplete"]:::completion
   APP_COMPLETE["/applicationComplete"]:::completion
   ATTEST["/attestationsAccepted"]:::supplied
   READY["/readyToSubmit"]:::output
